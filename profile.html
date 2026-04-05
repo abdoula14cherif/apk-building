@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>APK Building — Mon Profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#16a34a;--gd:#15803d;--gl:#22c55e;--gx:#dcfce7;--gp:#f0fdf4;--t:#111827;--t2:#374151;--mu:#6b7280;--bd:#e5e7eb;--w:#fff;--red:#ef4444}
+body{font-family:'Nunito',sans-serif;background:#f9fafb;color:var(--t);min-height:100vh;padding-bottom:80px}
+.topbar{background:var(--g);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(22,163,74,.3)}
+.tb-back{background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tb-title{font-size:1rem;font-weight:900;flex:1}
+.page-body{padding:16px;max-width:500px;margin:0 auto}
+.profile-hero{background:linear-gradient(135deg,var(--g),var(--gl));border-radius:16px;padding:24px;text-align:center;color:#fff;margin-bottom:16px;box-shadow:0 4px 16px rgba(22,163,74,.3)}
+.ph-avatar{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;margin:0 auto 12px;border:3px solid rgba(255,255,255,.4)}
+.ph-name{font-size:1.2rem;font-weight:900;margin-bottom:3px}
+.ph-email{font-size:.78rem;opacity:.85}
+.ph-plan{display:inline-block;background:rgba(255,255,255,.2);padding:4px 14px;border-radius:100px;font-size:.72rem;font-weight:900;text-transform:uppercase;margin-top:10px;letter-spacing:.06em}
+.section-title{font-size:.82rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:10px;margin-top:20px}
+.info-card{background:#fff;border:1.5px solid var(--bd);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.info-row{display:flex;align-items:center;padding:13px 14px;border-bottom:1px solid var(--bd);gap:12px}
+.info-row:last-child{border-bottom:none}
+.info-icon{font-size:1.1rem;width:30px;text-align:center;flex-shrink:0}
+.info-label{font-size:.68rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.info-val{font-size:.85rem;font-weight:700}
+.action-card{background:#fff;border:1.5px solid var(--bd);border-radius:14px;overflow:hidden;margin-bottom:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;padding:13px 14px;gap:12px}
+.action-card:hover{border-color:var(--g)}
+.action-icon{font-size:1.1rem;width:30px;text-align:center}
+.action-text{flex:1;font-size:.88rem;font-weight:800}
+.action-arrow{color:var(--mu)}
+.action-card.danger .action-text{color:var(--red)}
+.action-card.danger:hover{border-color:var(--red)}
+/* EDIT FORM */
+.edit-form{background:#fff;border:1.5px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px;display:none}
+.edit-form.show{display:block}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.7rem;font-weight:800;color:var(--t2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:.85rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.5}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:900;border:none;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-g{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)}
+.btn-g:hover{transform:translateY(-1px)}
+.btn-g:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.btn-w{background:#f3f4f6;color:var(--t2);border:1.5px solid var(--bd)}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{padding:10px 14px;border-radius:8px;font-size:.8rem;font-weight:700;margin-bottom:12px;display:none}
+.alert.show{display:block}
+.alert-g{background:var(--gx);color:var(--gd);border:1px solid #86efac}
+.alert-r{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
+.badge{font-size:.65rem;font-weight:800;padding:3px 8px;border-radius:100px;text-transform:uppercase}
+.badge-green{background:var(--gx);color:var(--gd)}
+.badge-gray{background:#f3f4f6;color:var(--mu)}
+/* NOTIFS */
+.notif-item{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:13px;margin-bottom:8px}
+.notif-item.unread{border-color:var(--g);background:var(--gp)}
+.notif-title{font-size:.85rem;font-weight:800;margin-bottom:3px}
+.notif-body{font-size:.78rem;color:var(--mu);line-height:1.5}
+.notif-time{font-size:.65rem;color:var(--mu);font-family:'DM Mono',monospace;margin-top:5px}
+/* TABS */
+.profile-tabs{display:flex;border-bottom:2px solid var(--bd);margin-bottom:16px;background:#fff;border-radius:12px 12px 0 0;overflow:hidden}
+.ptab{flex:1;padding:12px 8px;text-align:center;font-size:.75rem;font-weight:800;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;border:none;background:transparent}
+.ptab.active{color:var(--g);border-bottom-color:var(--g)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:30;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 12px;gap:3px;cursor:pointer;color:var(--mu);font-size:.6rem;font-weight:800;text-transform:uppercase;border:none;background:transparent;text-decoration:none}
+.bnav-item.active{color:var(--g)}
+.bnav-icon{font-size:1.3rem}
+/* REVIEW */
+.stars-input{display:flex;gap:4px;margin-bottom:10px}
+.star-btn{font-size:1.6rem;cursor:pointer;transition:transform .1s;background:none;border:none;padding:0}
+.star-btn:hover{transform:scale(1.2)}
+.apps-mini{display:flex;flex-direction:column;gap:8px}
+.app-mini{background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s}
+.app-mini:hover{border-color:var(--g)}
+.app-mini-icon{font-size:1.4rem;width:40px;height:40px;background:var(--gp);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.app-mini-name{font-size:.85rem;font-weight:800}
+.app-mini-cat{font-size:.7rem;color:var(--mu);font-weight:600}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);background:#1f2937;color:#fff;padding:10px 18px;border-radius:100px;font-size:.8rem;font-weight:700;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--g)}.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="topbar">
+  <button class="tb-back" onclick="window.location.href='dashboard.html'">←</button>
+  <div class="tb-title">Mon Profil</div>
+  <span id="adminBadge" style="display:none;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:100px;font-size:.65rem;font-weight:900">⚡ ADMIN</span>
+</div>
+
+<div class="page-body">
+  <div class="profile-hero">
+    <div class="ph-avatar" id="phAvatar">?</div>
+    <div class="ph-name" id="phName">Chargement...</div>
+    <div class="ph-email" id="phEmail"></div>
+    <div class="ph-plan" id="phPlan">FREE</div>
+  </div>
+
+  <!-- TABS -->
+  <div style="background:#fff;border:1.5px solid var(--bd);border-radius:14px;overflow:hidden;margin-bottom:16px">
+    <div class="profile-tabs">
+      <button class="ptab active" onclick="switchPTab('info',this)">ℹ️ Infos</button>
+      <button class="ptab" onclick="switchPTab('apps',this)">📱 Mes apps</button>
+      <button class="ptab" onclick="switchPTab('notifs',this)">🔔 Notifs</button>
+      <button class="ptab" onclick="switchPTab('contact',this)">✉️ Contact</button>
+      <button class="ptab" onclick="switchPTab('avis',this)">⭐ Avis</button>
+    </div>
+
+    <!-- INFO TAB -->
+    <div class="tab-pane active" id="pane-info" style="padding:14px">
+      <div class="info-card" id="infoCard">
+        <div class="info-row"><div class="info-icon">📧</div><div><div class="info-label">Email</div><div class="info-val" id="iEmail">—</div></div></div>
+        <div class="info-row"><div class="info-icon">📱</div><div><div class="info-label">WhatsApp</div><div class="info-val" id="iWa">—</div></div></div>
+        <div class="info-row"><div class="info-icon">✈️</div><div><div class="info-label">Telegram</div><div class="info-val" id="iTg">—</div></div></div>
+        <div class="info-row"><div class="info-icon">🌍</div><div><div class="info-label">Pays</div><div class="info-val" id="iCountry">—</div></div></div>
+        <div class="info-row"><div class="info-icon">📅</div><div><div class="info-label">Membre depuis</div><div class="info-val" id="iSince">—</div></div></div>
+        <div class="info-row"><div class="info-icon">📱</div><div><div class="info-label">Applications créées</div><div class="info-val" id="iApps">0</div></div></div>
+      </div>
+      <button class="btn btn-g" onclick="toggleEditForm()">✏️ Modifier mon profil</button>
+      <div class="edit-form" id="editForm">
+        <div class="alert alert-g" id="editOk">✅ Profil mis à jour !</div>
+        <div class="alert alert-r" id="editErr">⚠ Erreur. Réessaie.</div>
+        <div class="field"><label>Nom complet</label><input id="eName" placeholder="Ton nom"></div>
+        <div class="field"><label>WhatsApp</label><input id="eWa" placeholder="+33 6..."></div>
+        <div class="field"><label>Telegram</label><input id="eTg" placeholder="@username"></div>
+        <div class="field"><label>Pays</label>
+          <select id="eCountry">
+            <option value="">Sélectionner...</option>
+            <option>France</option><option>Belgique</option><option>Suisse</option><option>Canada</option>
+            <option>Maroc</option><option>Algérie</option><option>Tunisie</option><option>Sénégal</option>
+            <option>Côte d'Ivoire</option><option>Cameroun</option><option>Congo</option><option>Ghana</option>
+            <option>Nigeria</option><option>Autre</option>
+          </select>
+        </div>
+        <button class="btn btn-g" id="saveBtn" onclick="saveProfile()">
+          <div class="spin" id="saveSpin"></div>
+          <span id="saveTxt">💾 Enregistrer</span>
+        </button>
+        <button class="btn btn-w" onclick="toggleEditForm()">Annuler</button>
+      </div>
+    </div>
+
+    <!-- APPS TAB -->
+    <div class="tab-pane" id="pane-apps" style="padding:14px">
+      <div class="apps-mini" id="myAppsList">
+        <div style="text-align:center;padding:24px;color:var(--mu);font-size:.82rem">Chargement...</div>
+      </div>
+      <button class="btn btn-g" style="margin-top:12px" onclick="window.location.href='dashboard.html'">+ Créer une nouvelle app</button>
+    </div>
+
+    <!-- NOTIFS TAB -->
+    <div class="tab-pane" id="pane-notifs" style="padding:14px">
+      <div id="notifsList"><div style="text-align:center;padding:24px;color:var(--mu);font-size:.82rem">Chargement...</div></div>
+    </div>
+
+    <!-- CONTACT TAB -->
+    <div class="tab-pane" id="pane-contact" style="padding:14px" id="contact">
+      <div style="font-size:.82rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Tu as une question, un problème ou une suggestion ? Envoie un message à notre équipe. Nous te répondons sous 24h.</div>
+      <div class="alert alert-g" id="msgOk">✅ Message envoyé ! Nous te répondons sous 24h.</div>
+      <div class="alert alert-r" id="msgErr">⚠ Erreur lors de l'envoi.</div>
+      <div class="field"><label>Sujet *</label><input id="msgSubject" placeholder="Ex: Problème avec mon APK..."></div>
+      <div class="field"><label>Message *</label><textarea id="msgBody" placeholder="Décris ton problème ou ta question en détail..." rows="5"></textarea></div>
+      <button class="btn btn-g" id="msgBtn" onclick="sendMessage()">
+        <div class="spin" id="msgSpin"></div>
+        <span id="msgTxt">📤 Envoyer le message</span>
+      </button>
+      <div style="margin-top:20px;font-size:.78rem;color:var(--mu);font-weight:700;text-align:center">Ou contacte-nous directement sur <a href="https://wa.me/" target="_blank" style="color:var(--g)">WhatsApp</a></div>
+      <!-- Messages history -->
+      <div style="margin-top:20px" id="myMessages"></div>
+    </div>
+
+    <!-- AVIS TAB -->
+    <div class="tab-pane" id="pane-avis" style="padding:14px">
+      <div style="font-size:.82rem;color:var(--mu);margin-bottom:14px">Laisse un avis sur ton expérience avec APK Building.</div>
+      <div class="alert alert-g" id="avisOk">✅ Avis envoyé ! Merci pour ton retour.</div>
+      <div class="alert alert-r" id="avisErr">⚠ Erreur lors de l'envoi.</div>
+      <div class="field"><label>Ta note</label>
+        <div class="stars-input" id="starsInput">
+          <button class="star-btn" data-v="1" onclick="setRating(1)">☆</button>
+          <button class="star-btn" data-v="2" onclick="setRating(2)">☆</button>
+          <button class="star-btn" data-v="3" onclick="setRating(3)">☆</button>
+          <button class="star-btn" data-v="4" onclick="setRating(4)">☆</button>
+          <button class="star-btn" data-v="5" onclick="setRating(5)">☆</button>
+        </div>
+      </div>
+      <div class="field"><label>Ton commentaire</label><textarea id="avisComment" placeholder="Partage ton expérience avec APK Building..." rows="4"></textarea></div>
+      <button class="btn btn-g" id="avisBtn" onclick="sendAvis()">
+        <div class="spin" id="avisSpin"></div>
+        <span id="avisTxt">⭐ Envoyer mon avis</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="section-title">Actions du compte</div>
+  <div id="adminAction" style="display:none">
+    <div class="action-card" onclick="window.location.href='admin.html'">
+      <div class="action-icon">⚡</div>
+      <div class="action-text">Panel Administrateur</div>
+      <div class="action-arrow">›</div>
+    </div>
+  </div>
+  <div class="action-card" onclick="window.location.href='devis.html'">
+    <div class="action-icon">💼</div>
+    <div class="action-text">Demander un devis développeur</div>
+    <div class="action-arrow">›</div>
+  </div>
+  <div class="action-card danger" onclick="doLogout()">
+    <div class="action-icon">🚪</div>
+    <div class="action-text">Se déconnecter</div>
+    <div class="action-arrow">›</div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a class="bnav-item" href="dashboard.html"><div class="bnav-icon">🏠</div>Accueil</a>
+  <a class="bnav-item active" href="profile.html"><div class="bnav-icon">👤</div>Profil</a>
+  <a class="bnav-item" href="devis.html"><div class="bnav-icon">💼</div>Devis</a>
+</div>
+
+<script>
+const{createClient}=supabase;
+const sb=createClient('https://beppcitwncihpqhminmd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcHBjaXR3bmNpaHBxaG1pbm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzY2NTgsImV4cCI6MjA5MDk1MjY1OH0.nQ4VrAFekWd8kFy1oHBoU4dKaNRL61WZ6vSLFak7ei0');
+let currentUser=null,profile=null,userApps=[],rating=0;
+
+async function init(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='auth.html';return;}
+  currentUser=session.user;
+  const[{data:p},{data:apps}]=await Promise.all([
+    sb.from('profiles').select('*').eq('id',currentUser.id).single(),
+    sb.from('apps').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false})
+  ]);
+  profile=p; userApps=apps||[];
+  renderProfile();
+  loadNotifs();
+  loadMyMessages();
+  if(profile?.is_admin){document.getElementById('adminBadge').style.display='block';document.getElementById('adminAction').style.display='block';}
+}
+
+function renderProfile(){
+  if(!profile) return;
+  const init=(profile.full_name||profile.email||'U').charAt(0).toUpperCase();
+  document.getElementById('phAvatar').textContent=init;
+  document.getElementById('phName').textContent=profile.full_name||'Utilisateur';
+  document.getElementById('phEmail').textContent=profile.email;
+  document.getElementById('phPlan').textContent=(profile.plan||'free').toUpperCase();
+  document.getElementById('iEmail').textContent=profile.email||'—';
+  document.getElementById('iWa').textContent=profile.whatsapp||'Non renseigné';
+  document.getElementById('iTg').textContent=profile.telegram||'Non renseigné';
+  document.getElementById('iCountry').textContent=profile.country||'—';
+  document.getElementById('iSince').textContent=profile.created_at?new Date(profile.created_at).toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'}):'—';
+  document.getElementById('iApps').textContent=userApps.length;
+  // Pre-fill edit form
+  document.getElementById('eName').value=profile.full_name||'';
+  document.getElementById('eWa').value=profile.whatsapp||'';
+  document.getElementById('eTg').value=profile.telegram||'';
+  document.getElementById('eCountry').value=profile.country||'';
+  // Render apps
+  document.getElementById('myAppsList').innerHTML=userApps.length?userApps.map(a=>`
+    <div class="app-mini" onclick="window.location.href='dashboard.html?app=${a.id}'">
+      <div class="app-mini-icon">${a.icon||'📱'}</div>
+      <div><div class="app-mini-name">${a.name||'Sans nom'}</div><div class="app-mini-cat">${a.category||'—'} · <span class="badge ${a.status==='ready'?'badge-green':'badge-gray'}">${a.status||'draft'}</span></div></div>
+    </div>`).join(''):'<div style="text-align:center;padding:24px;color:var(--mu);font-size:.82rem">Aucune app créée</div>';
+}
+
+async function loadNotifs(){
+  const{data:notifs}=await sb.from('notifications').select('*').or(`target_user_id.eq.${currentUser.id},is_global.eq.true`).order('created_at',{ascending:false}).limit(20);
+  document.getElementById('notifsList').innerHTML=(notifs&&notifs.length)?notifs.map(n=>`
+    <div class="notif-item ${!n.is_read?'unread':''}">
+      <div class="notif-title">${n.title}</div>
+      <div class="notif-body">${n.message}</div>
+      <div class="notif-time">${new Date(n.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join(''):'<div style="text-align:center;padding:24px;color:var(--mu);font-size:.82rem">Aucune notification</div>';
+}
+
+async function loadMyMessages(){
+  const{data:msgs}=await sb.from('messages').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(10);
+  const el=document.getElementById('myMessages');
+  if(!msgs||!msgs.length){el.innerHTML='';return;}
+  el.innerHTML='<div style="font-size:.78rem;font-weight:900;color:var(--mu);text-transform:uppercase;margin-bottom:8px">Mes messages précédents</div>'+
+    msgs.map(m=>`<div style="background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:.82rem;font-weight:800">${m.subject}</div>
+        <span class="badge ${m.status==='replied'?'badge-green':'badge-gray'}">${m.status}</span>
+      </div>
+      <div style="font-size:.75rem;color:var(--mu)">${m.body.slice(0,80)}...</div>
+      ${m.admin_reply?`<div style="margin-top:8px;padding:8px;background:var(--gp);border-radius:7px;font-size:.75rem;color:var(--gd);font-weight:700">💬 Réponse: ${m.admin_reply}</div>`:''}
+    </div>`).join('');
+}
+
+function toggleEditForm(){
+  const f=document.getElementById('editForm');
+  f.classList.toggle('show');
+}
+
+async function saveProfile(){
+  const name=document.getElementById('eName').value.trim();
+  const wa=document.getElementById('eWa').value.trim();
+  const tg=document.getElementById('eTg').value.trim();
+  const country=document.getElementById('eCountry').value;
+  if(!name){toast('Le nom est requis','err');return;}
+  setBusy('saveBtn','saveSpin','saveTxt',true);
+  const{error}=await sb.from('profiles').update({full_name:name,whatsapp:wa,telegram:tg,country,updated_at:new Date().toISOString()}).eq('id',currentUser.id);
+  if(error){document.getElementById('editErr').classList.add('show');}
+  else{
+    profile={...profile,full_name:name,whatsapp:wa,telegram:tg,country};
+    document.getElementById('editOk').classList.add('show');
+    renderProfile();
+    setTimeout(()=>{document.getElementById('editOk').classList.remove('show');toggleEditForm();},1500);
+    toast('Profil mis à jour ✓','ok');
+  }
+  setBusy('saveBtn','saveSpin','saveTxt',false,'💾 Enregistrer');
+}
+
+async function sendMessage(){
+  const subject=document.getElementById('msgSubject').value.trim();
+  const body=document.getElementById('msgBody').value.trim();
+  if(!subject||!body){toast('Remplis le sujet et le message','err');return;}
+  setBusy('msgBtn','msgSpin','msgTxt',true);
+  const{error}=await sb.from('messages').insert({user_id:currentUser.id,subject,body,status:'unread'});
+  if(error){document.getElementById('msgErr').classList.add('show');}
+  else{
+    document.getElementById('msgOk').classList.add('show');
+    document.getElementById('msgSubject').value='';
+    document.getElementById('msgBody').value='';
+    loadMyMessages();
+    toast('Message envoyé ✓','ok');
+  }
+  setBusy('msgBtn','msgSpin','msgTxt',false,'📤 Envoyer le message');
+}
+
+function setRating(v){
+  rating=v;
+  document.querySelectorAll('.star-btn').forEach((b,i)=>b.textContent=i<v?'⭐':'☆');
+}
+
+async function sendAvis(){
+  const comment=document.getElementById('avisComment').value.trim();
+  if(!rating){toast('Sélectionne une note','err');return;}
+  if(!comment){toast('Écris un commentaire','err');return;}
+  setBusy('avisBtn','avisSpin','avisTxt',true);
+  const{error}=await sb.from('reviews').insert({user_id:currentUser.id,rating,comment,is_approved:false});
+  if(error){document.getElementById('avisErr').classList.add('show');}
+  else{document.getElementById('avisOk').classList.add('show');document.getElementById('avisComment').value='';setRating(0);toast('Avis envoyé ✓','ok');}
+  setBusy('avisBtn','avisSpin','avisTxt',false,'⭐ Envoyer mon avis');
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  window.location.href='auth.html';
+}
+
+function switchPTab(t,btn){
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+t).classList.add('active');
+}
+
+function setBusy(btnId,spinId,txtId,busy,label=''){
+  document.getElementById(btnId).disabled=busy;
+  document.getElementById(spinId).style.display=busy?'block':'none';
+  if(!busy&&label)document.getElementById(txtId).textContent=label;
+}
+
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.classList.remove('show'),3000);}
+
+init();
+</script>
+</body>
+</html>
