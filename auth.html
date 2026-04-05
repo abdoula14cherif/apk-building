@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>APK Building — Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#16a34a;--gd:#15803d;--gl:#22c55e;--gx:#dcfce7;--gp:#f0fdf4;--t:#111827;--t2:#374151;--mu:#6b7280;--bd:#e5e7eb;--w:#fff;--red:#ef4444}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(160deg,var(--gp) 0%,#fff 60%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.logo{display:flex;flex-direction:column;align-items:center;margin-bottom:28px}
+.logo-icon{width:64px;height:64px;background:linear-gradient(135deg,var(--g),var(--gl));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:10px;box-shadow:0 8px 24px rgba(22,163,74,.3)}
+.logo-name{font-size:1.5rem;font-weight:900;color:var(--gd)}
+.logo-sub{font-size:.8rem;color:var(--mu);font-weight:600;margin-top:2px}
+.card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,.1);border:1px solid var(--bd)}
+.tabs{display:flex;border-bottom:2px solid var(--bd);margin-bottom:24px}
+.tab{flex:1;padding:10px;text-align:center;font-size:.88rem;font-weight:800;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--g);border-bottom-color:var(--g)}
+.form-panel{display:none}
+.form-panel.active{display:block}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.72rem;font-weight:800;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field label .req{color:var(--red)}
+.field input,.field select{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:11px 13px;font-size:.88rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;transition:border-color .2s,box-shadow .2s;background:#fff}
+.field input:focus,.field select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+.field select{-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%236b7280' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-err{font-size:.7rem;color:var(--red);font-weight:700;margin-top:4px;display:none}
+.field-err.show{display:block}
+.check-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.check-row input[type=checkbox]{width:17px;height:17px;margin-top:2px;accent-color:var(--g);flex-shrink:0;cursor:pointer}
+.check-label{font-size:.8rem;color:var(--t2);line-height:1.5}
+.check-label a{color:var(--g);font-weight:700}
+.btn{width:100%;padding:13px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:900;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-g{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 4px 14px rgba(22,163,74,.3)}
+.btn-g:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,163,74,.4)}
+.btn-g:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--mu);font-size:.78rem;font-weight:700}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bd)}
+.btn-google{background:#fff;border:1.5px solid var(--bd);color:var(--t2);font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:800;padding:11px;width:100%;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-google:hover{border-color:var(--g)}
+.alert{padding:10px 14px;border-radius:8px;font-size:.8rem;font-weight:700;margin-bottom:14px;display:none;align-items:center;gap:8px}
+.alert.show{display:flex}
+.alert-red{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
+.alert-green{background:var(--gx);color:var(--gd);border:1px solid #86efac}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back-link{text-align:center;margin-top:16px;font-size:.82rem;color:var(--mu)}
+.back-link a{color:var(--g);font-weight:800;text-decoration:none}
+.forgot{text-align:right;margin-top:-10px;margin-bottom:12px}
+.forgot a{font-size:.75rem;color:var(--g);font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="logo">
+  <div class="logo-icon">📱</div>
+  <div class="logo-name">APK Building</div>
+  <div class="logo-sub">Crée tes apps Android sans coder</div>
+</div>
+<div class="card">
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="switchTab('login')">Connexion</div>
+    <div class="tab" id="tabRegister" onclick="switchTab('register')">Inscription</div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="form-panel active" id="panelLogin">
+    <div class="alert alert-red" id="loginErr">⚠ <span id="loginErrMsg"></span></div>
+    <div class="alert alert-green" id="loginOk">✅ Connexion réussie ! Redirection...</div>
+    <div class="field">
+      <label>Email <span class="req">*</span></label>
+      <input type="email" id="lEmail" placeholder="exemple@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Mot de passe <span class="req">*</span></label>
+      <input type="password" id="lPwd" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="forgot"><a href="#" onclick="forgotPwd(event)">Mot de passe oublié ?</a></div>
+    <button class="btn btn-g" id="loginBtn" onclick="doLogin()">
+      <div class="spin" id="loginSpin" style="display:none"></div>
+      <span id="loginBtnTxt">Se connecter</span>
+    </button>
+    <div class="divider">ou</div>
+    <button class="btn-google" onclick="loginGoogle()">🌐 Continuer avec Google</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="form-panel" id="panelRegister">
+    <div class="alert alert-red" id="regErr">⚠ <span id="regErrMsg"></span></div>
+    <div class="alert alert-green" id="regOk">✅ Compte créé ! Vérifiez votre email.</div>
+    <div class="field">
+      <label>Nom complet <span class="req">*</span></label>
+      <input type="text" id="rName" placeholder="Jean Dupont" autocomplete="name">
+      <div class="field-err" id="errName">Requis.</div>
+    </div>
+    <div class="field">
+      <label>Email <span class="req">*</span></label>
+      <input type="email" id="rEmail" placeholder="jean@exemple.com">
+      <div class="field-err" id="errEmail">Email invalide.</div>
+    </div>
+    <div class="field">
+      <label>Mot de passe <span class="req">*</span></label>
+      <input type="password" id="rPwd" placeholder="Minimum 8 caractères">
+      <div class="field-err" id="errPwd">Minimum 8 caractères.</div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>WhatsApp</label>
+        <input type="tel" id="rWa" placeholder="+33 6...">
+      </div>
+      <div class="field">
+        <label>Telegram</label>
+        <input type="text" id="rTg" placeholder="@username">
+      </div>
+    </div>
+    <div class="field">
+      <label>Pays <span class="req">*</span></label>
+      <select id="rCountry">
+        <option value="">Sélectionner...</option>
+        <option>France</option><option>Belgique</option><option>Suisse</option><option>Canada</option>
+        <option>Maroc</option><option>Algérie</option><option>Tunisie</option><option>Sénégal</option>
+        <option>Côte d'Ivoire</option><option>Cameroun</option><option>Congo</option><option>Madagascar</option>
+        <option>Mali</option><option>Burkina Faso</option><option>Niger</option><option>Togo</option>
+        <option>Bénin</option><option>Guinée</option><option>Gabon</option><option>Ghana</option>
+        <option>Nigeria</option><option>Kenya</option><option>Autre</option>
+      </select>
+      <div class="field-err" id="errCountry">Requis.</div>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="rTerms">
+      <span class="check-label">J'accepte les <a href="#" onclick="alert('Conditions : utilisation légale uniquement.')">conditions d\'utilisation</a> <span class="req">*</span></span>
+    </div>
+    <div class="field-err" id="errTerms" style="margin-top:-10px;margin-bottom:10px">Veuillez accepter les conditions.</div>
+    <button class="btn btn-g" id="regBtn" onclick="doRegister()">
+      <div class="spin" id="regSpin" style="display:none"></div>
+      <span id="regBtnTxt">Créer mon compte</span>
+    </button>
+  </div>
+</div>
+<div class="back-link"><a href="index.html">← Retour à l'accueil</a></div>
+
+<script>
+const{createClient}=supabase;
+const sb=createClient('https://beppcitwncihpqhminmd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcHBjaXR3bmNpaHBxaG1pbm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzY2NTgsImV4cCI6MjA5MDk1MjY1OH0.nQ4VrAFekWd8kFy1oHBoU4dKaNRL61WZ6vSLFak7ei0');
+
+// Auto-detect mode from URL
+const urlParams=new URLSearchParams(window.location.search);
+if(urlParams.get('mode')==='register') switchTab('register');
+
+// Check already logged in
+sb.auth.getSession().then(({data:{session}})=>{if(session) window.location.href='dashboard.html';});
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.form-panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab'+cap(t)).classList.add('active');
+  document.getElementById('panel'+cap(t)).classList.add('active');
+  hideAll();
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function hideAll(){['loginErr','loginOk','regErr','regOk'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('show');});}
+function showAlert(id,msgId,msg){const el=document.getElementById(id);el.classList.add('show');if(msgId&&msg)document.getElementById(msgId).textContent=msg;}
+function setBusy(btnId,spinId,txtId,busy,label=''){
+  document.getElementById(btnId).disabled=busy;
+  document.getElementById(spinId).style.display=busy?'block':'none';
+  if(!busy&&label)document.getElementById(txtId).textContent=label;
+}
+
+async function doLogin(){
+  hideAll();
+  const email=document.getElementById('lEmail').value.trim();
+  const pwd=document.getElementById('lPwd').value;
+  if(!email||!pwd){showAlert('loginErr','loginErrMsg','Veuillez remplir tous les champs.');return;}
+  setBusy('loginBtn','loginSpin','loginBtnTxt',true);
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pwd});
+  if(error){showAlert('loginErr','loginErrMsg',error.message);}
+  else{showAlert('loginOk');setTimeout(()=>window.location.href='dashboard.html',1000);}
+  setBusy('loginBtn','loginSpin','loginBtnTxt',false,'Se connecter');
+}
+
+async function doRegister(){
+  hideAll();
+  const name=document.getElementById('rName').value.trim();
+  const email=document.getElementById('rEmail').value.trim();
+  const pwd=document.getElementById('rPwd').value;
+  const country=document.getElementById('rCountry').value;
+  const wa=document.getElementById('rWa').value.trim();
+  const tg=document.getElementById('rTg').value.trim();
+  const terms=document.getElementById('rTerms').checked;
+  // Validation
+  let ok=true;
+  const setErr=(id,show)=>{document.getElementById(id).className='field-err'+(show?' show':'');if(show)ok=false;};
+  setErr('errName',!name);
+  setErr('errEmail',!email||!email.includes('@'));
+  setErr('errPwd',!pwd||pwd.length<8);
+  setErr('errCountry',!country);
+  setErr('errTerms',!terms);
+  if(!ok) return;
+  setBusy('regBtn','regSpin','regBtnTxt',true);
+  const{data,error}=await sb.auth.signUp({
+    email,password:pwd,
+    options:{data:{full_name:name,country,whatsapp:wa,telegram:tg,terms_accepted:true}}
+  });
+  if(error){showAlert('regErr','regErrMsg',error.message);}
+  else{
+    // Update profile with extra fields
+    if(data.user){
+      await sb.from('profiles').upsert({
+        id:data.user.id,full_name:name,email,country,whatsapp:wa,telegram:tg,
+        terms_accepted:true,terms_accepted_at:new Date().toISOString()
+      });
+    }
+    showAlert('regOk');
+    setTimeout(()=>switchTab('login'),2500);
+  }
+  setBusy('regBtn','regSpin','regBtnTxt',false,'Créer mon compte');
+}
+
+async function loginGoogle(){
+  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/dashboard.html'}});
+}
+
+async function forgotPwd(e){
+  e.preventDefault();
+  const email=prompt('Votre adresse email :');
+  if(!email) return;
+  const{error}=await sb.auth.resetPasswordForEmail(email);
+  if(error) alert('Erreur: '+error.message);
+  else alert('Email de réinitialisation envoyé !');
+}
+</script>
+</body>
+</html>
