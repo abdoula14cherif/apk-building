@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>APK Building — Demande de Devis</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#16a34a;--gd:#15803d;--gl:#22c55e;--gx:#dcfce7;--gp:#f0fdf4;--t:#111827;--t2:#374151;--mu:#6b7280;--bd:#e5e7eb;--w:#fff;--red:#ef4444}
+body{font-family:'Nunito',sans-serif;background:#f9fafb;color:var(--t);min-height:100vh;padding-bottom:80px}
+.topbar{background:var(--g);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(22,163,74,.3)}
+.tb-back{background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tb-title{font-size:1rem;font-weight:900;flex:1}
+.page-body{padding:16px;max-width:560px;margin:0 auto}
+/* HERO */
+.devis-hero{background:linear-gradient(135deg,var(--g),var(--gl));border-radius:16px;padding:24px;color:#fff;margin-bottom:20px;box-shadow:0 4px 16px rgba(22,163,74,.3)}
+.dh-title{font-size:1.2rem;font-weight:900;margin-bottom:8px}
+.dh-sub{font-size:.82rem;opacity:.9;line-height:1.6;margin-bottom:16px}
+.dh-features{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dh-feat{background:rgba(255,255,255,.2);border-radius:8px;padding:10px 12px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:6px}
+/* FORM */
+.form-card{background:#fff;border:1.5px solid var(--bd);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.form-card-title{font-size:.9rem;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--gd)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.7rem;font-weight:800;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field label .req{color:var(--red)}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:11px 13px;font-size:.88rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.08)}
+.field textarea{resize:vertical;min-height:100px;line-height:1.6}
+.field select{-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%236b7280' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-err{font-size:.7rem;color:var(--red);font-weight:700;margin-top:4px;display:none}
+.field-err.show{display:block}
+/* APP TYPE SELECTOR */
+.app-types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.app-type-opt{padding:12px 8px;border:1.5px solid var(--bd);border-radius:10px;text-align:center;cursor:pointer;transition:all .15s}
+.app-type-opt:hover{border-color:var(--g);background:var(--gp)}
+.app-type-opt.sel{border-color:var(--g);background:var(--gp);box-shadow:0 0 0 2px rgba(22,163,74,.2)}
+.ato-icon{font-size:1.4rem;margin-bottom:4px}
+.ato-name{font-size:.68rem;font-weight:800;color:var(--t2)}
+/* BUDGET */
+.budget-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.budget-opt{padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;transition:all .15s;font-size:.78rem;font-weight:700;text-align:center}
+.budget-opt:hover{border-color:var(--g)}
+.budget-opt.sel{border-color:var(--g);background:var(--gp);color:var(--gd)}
+/* FEATURES CHECKBOXES */
+.features-check{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.fc-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--bd);border-radius:8px;cursor:pointer;transition:all .15s;font-size:.78rem;font-weight:700}
+.fc-item input{width:16px;height:16px;accent-color:var(--g);cursor:pointer}
+.fc-item:hover{border-color:var(--g)}
+/* SUBMIT */
+.submit-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:900;border:none;cursor:pointer;background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 6px 20px rgba(22,163,74,.35);transition:all .2s}
+.submit-btn:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(22,163,74,.45)}
+.submit-btn:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:700;margin-bottom:16px;display:none;align-items:center;gap:10px;line-height:1.5}
+.alert.show{display:flex}
+.alert-g{background:var(--gx);color:var(--gd);border:1px solid #86efac}
+.alert-r{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
+/* SUCCESS */
+.success-state{text-align:center;padding:40px 20px;display:none}
+.success-state.show{display:block}
+.success-icon{font-size:4rem;margin-bottom:16px}
+.success-title{font-size:1.3rem;font-weight:900;margin-bottom:8px}
+.success-sub{font-size:.85rem;color:var(--mu);line-height:1.6;margin-bottom:24px}
+.success-wa{display:inline-flex;align-items:center;gap:10px;padding:14px 24px;background:#25d366;color:#fff;border-radius:12px;font-weight:900;font-size:.95rem;text-decoration:none;box-shadow:0 4px 16px rgba(37,211,102,.3);transition:all .2s}
+.success-wa:hover{transform:translateY(-1px)}
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(16px);background:#1f2937;color:#fff;padding:10px 18px;border-radius:100px;font-size:.8rem;font-weight:700;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--g)}.toast.err{background:var(--red)}
+/* REVIEWS */
+.reviews-section{margin-top:24px}
+.review-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px}
+.rv-stars{font-size:.85rem;margin-bottom:6px}
+.rv-comment{font-size:.82rem;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.rv-author{font-size:.72rem;color:var(--mu);font-weight:700}
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:30;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 12px;gap:3px;cursor:pointer;color:var(--mu);font-size:.6rem;font-weight:800;text-transform:uppercase;border:none;background:transparent;text-decoration:none}
+.bnav-item.active{color:var(--g)}
+.bnav-icon{font-size:1.3rem}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="topbar">
+  <button class="tb-back" onclick="window.location.href='dashboard.html'">←</button>
+  <div class="tb-title">💼 Devis & Développeur</div>
+</div>
+
+<div class="page-body">
+  <div class="devis-hero">
+    <div class="dh-title">🚀 Fais développer ton app</div>
+    <div class="dh-sub">Tu as une idée mais tu veux une app plus avancée ? Remplis ce formulaire et notre équipe te contacte via WhatsApp sous 24h.</div>
+    <div class="dh-features">
+      <div class="dh-feat">⚡ Réponse sous 24h</div>
+      <div class="dh-feat">📱 App native Android</div>
+      <div class="dh-feat">🔗 Contact WhatsApp</div>
+      <div class="dh-feat">💰 Devis gratuit</div>
+    </div>
+  </div>
+
+  <!-- FORM / SUCCESS STATE -->
+  <div id="formState">
+    <div class="alert alert-r" id="formErr">⚠ <span id="formErrMsg"></span></div>
+    <div class="alert alert-g" id="formOk">✅ Devis envoyé avec succès !</div>
+
+    <!-- CONTACT INFO -->
+    <div class="form-card">
+      <div class="form-card-title">👤 Tes informations</div>
+      <div class="field"><label>Nom complet <span class="req">*</span></label><input id="dName" placeholder="Jean Dupont"></div>
+      <div class="field-row">
+        <div class="field"><label>Email <span class="req">*</span></label><input type="email" id="dEmail" placeholder="email@exemple.com"></div>
+        <div class="field"><label>WhatsApp <span class="req">*</span></label><input type="tel" id="dWa" placeholder="+33 6..."></div>
+      </div>
+      <div class="field"><label>Pays</label>
+        <select id="dCountry">
+          <option value="">Sélectionner...</option>
+          <option>France</option><option>Belgique</option><option>Suisse</option><option>Canada</option>
+          <option>Maroc</option><option>Algérie</option><option>Tunisie</option><option>Sénégal</option>
+          <option>Côte d'Ivoire</option><option>Cameroun</option><option>Congo</option><option>Ghana</option>
+          <option>Nigeria</option><option>Autre</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- APP TYPE -->
+    <div class="form-card">
+      <div class="form-card-title">📱 Type d'application</div>
+      <div class="field"><label>Nom de l'app</label><input id="dAppName" placeholder="Ex: MonApp, ShopKing..."></div>
+      <div class="field">
+        <label>Catégorie <span class="req">*</span></label>
+        <div class="app-types" id="appTypesGrid">
+          <div class="app-type-opt" onclick="selType(this,'E-commerce')"><div class="ato-icon">🛒</div><div class="ato-name">E-commerce</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Cours en ligne')"><div class="ato-icon">🎓</div><div class="ato-name">Cours</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Musique')"><div class="ato-icon">🎵</div><div class="ato-name">Musique</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Réseau social')"><div class="ato-icon">💬</div><div class="ato-name">Social</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Finance')"><div class="ato-icon">💰</div><div class="ato-name">Finance</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Santé & Sport')"><div class="ato-icon">💪</div><div class="ato-name">Santé</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Actualités')"><div class="ato-icon">📰</div><div class="ato-name">News</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Restauration')"><div class="ato-icon">🍔</div><div class="ato-name">Food</div></div>
+          <div class="app-type-opt" onclick="selType(this,'Autre')"><div class="ato-icon">⚙️</div><div class="ato-name">Autre</div></div>
+        </div>
+        <input type="hidden" id="dAppType">
+        <div class="field-err" id="errType">Sélectionne un type.</div>
+      </div>
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="form-card">
+      <div class="form-card-title">📋 Description du projet</div>
+      <div class="field"><label>Décris ton application <span class="req">*</span></label><textarea id="dDesc" placeholder="Décris en détail ce que doit faire ton application, qui l'utilisera, les fonctionnalités principales..." rows="5"></textarea></div>
+      <div class="field"><label>Référence design (URL ou description)</label><input id="dDesignRef" placeholder="Ex: comme Instagram mais pour les artisans..."></div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="form-card">
+      <div class="form-card-title">⚙️ Fonctionnalités souhaitées</div>
+      <div class="features-check">
+        <div class="fc-item"><input type="checkbox" id="f1" value="Authentification"><label for="f1">🔐 Connexion/Auth</label></div>
+        <div class="fc-item"><input type="checkbox" id="f2" value="Paiements"><label for="f2">💳 Paiements</label></div>
+        <div class="fc-item"><input type="checkbox" id="f3" value="Chat/Messagerie"><label for="f3">💬 Chat</label></div>
+        <div class="fc-item"><input type="checkbox" id="f4" value="Notifications push"><label for="f4">🔔 Notifications</label></div>
+        <div class="fc-item"><input type="checkbox" id="f5" value="Géolocalisation"><label for="f5">📍 Géolocalisation</label></div>
+        <div class="fc-item"><input type="checkbox" id="f6" value="Caméra/Photos"><label for="f6">📷 Caméra</label></div>
+        <div class="fc-item"><input type="checkbox" id="f7" value="Base de données"><label for="f7">☁️ Base de données</label></div>
+        <div class="fc-item"><input type="checkbox" id="f8" value="Dashboard admin"><label for="f8">📊 Dashboard admin</label></div>
+        <div class="fc-item"><input type="checkbox" id="f9" value="Partage social"><label for="f9">📢 Partage social</label></div>
+        <div class="fc-item"><input type="checkbox" id="f10" value="Play Store"><label for="f10">🏪 Play Store</label></div>
+      </div>
+    </div>
+
+    <!-- BUDGET & DÉLAI -->
+    <div class="form-card">
+      <div class="form-card-title">💰 Budget & Délai</div>
+      <div class="field">
+        <label>Budget estimé <span class="req">*</span></label>
+        <div class="budget-opts">
+          <div class="budget-opt" onclick="selBudget(this,'Moins de 200€')">Moins de 200€</div>
+          <div class="budget-opt" onclick="selBudget(this,'200€ - 500€')">200€ - 500€</div>
+          <div class="budget-opt" onclick="selBudget(this,'500€ - 1000€')">500€ - 1000€</div>
+          <div class="budget-opt" onclick="selBudget(this,'Plus de 1000€')">Plus de 1000€</div>
+        </div>
+        <input type="hidden" id="dBudget">
+        <div class="field-err" id="errBudget">Sélectionne un budget.</div>
+      </div>
+      <div class="field"><label>Délai souhaité</label>
+        <select id="dDeadline">
+          <option value="">Pas de contrainte</option>
+          <option>Urgent (moins de 2 semaines)</option>
+          <option>1 mois</option>
+          <option>2-3 mois</option>
+          <option>Plus de 3 mois</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button class="submit-btn" id="submitBtn" onclick="submitDevis()">
+      <div class="spin" id="submitSpin"></div>
+      <span id="submitTxt">📤 Envoyer ma demande</span>
+    </button>
+    <div style="text-align:center;margin-top:12px;font-size:.75rem;color:var(--mu);font-weight:700">Notre équipe te contactera via WhatsApp sous 24h</div>
+  </div>
+
+  <!-- SUCCESS STATE -->
+  <div class="success-state" id="successState">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">Demande envoyée !</div>
+    <div class="success-sub">Ton devis a été transmis à notre équipe. Nous allons analyser ton projet et te contacter via WhatsApp sous 24 heures. Prépare-toi à construire quelque chose d'incroyable !</div>
+    <a class="success-wa" href="https://wa.me/" target="_blank" id="waLink">
+      <span>💬</span> Contacter directement sur WhatsApp
+    </a>
+    <div style="margin-top:20px">
+      <button onclick="resetForm()" style="background:none;border:1.5px solid var(--bd);border-radius:9px;padding:10px 20px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;color:var(--mu)">Envoyer une autre demande</button>
+    </div>
+  </div>
+
+  <!-- AVIS section -->
+  <div class="reviews-section" id="reviewsSection">
+    <div style="font-size:.9rem;font-weight:900;margin-bottom:14px;color:var(--gd)">⭐ Avis des utilisateurs</div>
+    <div id="reviewsList"><div style="text-align:center;padding:20px;color:var(--mu);font-size:.82rem">Chargement des avis...</div></div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a class="bnav-item" href="dashboard.html"><div class="bnav-icon">🏠</div>Accueil</a>
+  <a class="bnav-item" href="profile.html"><div class="bnav-icon">👤</div>Profil</a>
+  <a class="bnav-item active" href="devis.html"><div class="bnav-icon">💼</div>Devis</a>
+</div>
+
+<script>
+const{createClient}=supabase;
+const sb=createClient('https://beppcitwncihpqhminmd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcHBjaXR3bmNpaHBxaG1pbm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzY2NTgsImV4cCI6MjA5MDk1MjY1OH0.nQ4VrAFekWd8kFy1oHBoU4dKaNRL61WZ6vSLFak7ei0');
+let currentUser=null;
+
+async function init(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+    if(p){
+      document.getElementById('dName').value=p.full_name||'';
+      document.getElementById('dEmail').value=p.email||'';
+      document.getElementById('dWa').value=p.whatsapp||'';
+      document.getElementById('dCountry').value=p.country||'';
+    }
+  }
+  loadReviews();
+}
+
+async function loadReviews(){
+  const{data:reviews}=await sb.from('reviews').select('*,profiles(full_name,country)').eq('is_approved',true).order('created_at',{ascending:false}).limit(10);
+  document.getElementById('reviewsList').innerHTML=(reviews&&reviews.length)?reviews.map(r=>`
+    <div class="review-card">
+      <div class="rv-stars">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+      <div class="rv-comment">"${r.comment}"</div>
+      <div class="rv-author">— ${r.profiles?.full_name||'Utilisateur anonyme'} · ${r.profiles?.country||''}</div>
+    </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--mu);font-size:.82rem">Aucun avis pour l\'instant.</div>';
+}
+
+function selType(el,val){
+  document.querySelectorAll('.app-type-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('dAppType').value=val;
+  document.getElementById('errType').classList.remove('show');
+}
+
+function selBudget(el,val){
+  document.querySelectorAll('.budget-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('dBudget').value=val;
+  document.getElementById('errBudget').classList.remove('show');
+}
+
+async function submitDevis(){
+  const name=document.getElementById('dName').value.trim();
+  const email=document.getElementById('dEmail').value.trim();
+  const wa=document.getElementById('dWa').value.trim();
+  const country=document.getElementById('dCountry').value;
+  const appType=document.getElementById('dAppType').value;
+  const appName=document.getElementById('dAppName').value.trim();
+  const desc=document.getElementById('dDesc').value.trim();
+  const designRef=document.getElementById('dDesignRef').value.trim();
+  const budget=document.getElementById('dBudget').value;
+  const deadline=document.getElementById('dDeadline').value;
+  // Features
+  const feats=[];
+  for(let i=1;i<=10;i++){const cb=document.getElementById('f'+i);if(cb&&cb.checked)feats.push(cb.value);}
+  // Validation
+  let ok=true;
+  if(!name||!email||!wa||!desc){document.getElementById('formErrMsg').textContent='Remplis les champs obligatoires (nom, email, WhatsApp, description).';document.getElementById('formErr').classList.add('show');ok=false;}
+  if(!appType){document.getElementById('errType').classList.add('show');ok=false;}
+  if(!budget){document.getElementById('errBudget').classList.add('show');ok=false;}
+  if(!ok) return;
+  document.getElementById('formErr').classList.remove('show');
+  document.getElementById('submitBtn').disabled=true;
+  document.getElementById('submitSpin').style.display='block';
+  document.getElementById('submitTxt').style.display='none';
+  const{error}=await sb.from('devis').insert({
+    user_id:currentUser?.id||null,full_name:name,email,whatsapp:wa,country,
+    app_type:appType,app_name:appName,description:desc,design_ref:designRef,
+    budget,deadline,features:feats.join(', '),status:'pending'
+  });
+  if(error){
+    document.getElementById('formErrMsg').textContent='Erreur: '+error.message;
+    document.getElementById('formErr').classList.add('show');
+    document.getElementById('submitBtn').disabled=false;
+    document.getElementById('submitSpin').style.display='none';
+    document.getElementById('submitTxt').style.display='inline';
+  } else {
+    document.getElementById('formState').style.display='none';
+    document.getElementById('successState').classList.add('show');
+    // Set WhatsApp link with pre-filled message
+    const msg=encodeURIComponent(`Bonjour, j'ai soumis un devis pour mon app "${appName||appType}" sur APK Building. Je voudrais en discuter.`);
+    document.getElementById('waLink').href=`https://wa.me/?text=${msg}`;
+  }
+}
+
+function resetForm(){
+  document.getElementById('formState').style.display='block';
+  document.getElementById('successState').classList.remove('show');
+  document.getElementById('formOk').classList.remove('show');
+  document.getElementById('formErr').classList.remove('show');
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitSpin').style.display='none';
+  document.getElementById('submitTxt').style.display='inline';
+}
+
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.classList.remove('show'),3000);}
+init();
+</script>
+</body>
+</html>
