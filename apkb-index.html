@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APK Building — Crée ton app Android</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#16a34a;--gd:#15803d;--gl:#22c55e;--gx:#dcfce7;--gp:#f0fdf4;--t:#111827;--mu:#6b7280;--bd:#e5e7eb;--w:#fff}
+body{font-family:'Nunito',sans-serif;background:#fff;color:var(--t);overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);padding:0 24px;height:60px;display:flex;align-items:center;gap:16px}
+.nav-logo{display:flex;align-items:center;gap:8px;font-size:1.1rem;font-weight:900;color:var(--g);text-decoration:none}
+.nav-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--g),var(--gl));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.nav-links{display:flex;gap:24px;margin-left:auto;align-items:center}
+.nav-link{font-size:.85rem;font-weight:700;color:var(--mu);text-decoration:none;transition:color .15s}
+.nav-link:hover{color:var(--g)}
+.nav-btn{padding:8px 20px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;border:none;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center}
+.nav-btn-outline{border:1.5px solid var(--g);color:var(--g);background:transparent}
+.nav-btn-fill{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)}
+.nav-btn-fill:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(22,163,74,.4)}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 60px;background:linear-gradient(160deg,var(--gp) 0%,#fff 50%)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gx);color:var(--gd);padding:6px 14px;border-radius:100px;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:20px;border:1px solid #86efac}
+.hero h1{font-size:clamp(2rem,6vw,3.8rem);font-weight:900;line-height:1.1;letter-spacing:-.03em;margin-bottom:20px;max-width:700px}
+.hero h1 span{background:linear-gradient(90deg,var(--g),var(--gl));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:clamp(.95rem,2vw,1.1rem);color:var(--mu);max-width:520px;line-height:1.7;margin-bottom:32px}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.hero-btn-main{padding:15px 32px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;border:none;background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 6px 24px rgba(22,163,74,.35);transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.hero-btn-main:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(22,163,74,.45)}
+.hero-btn-sec{padding:15px 32px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;border:2px solid var(--bd);background:#fff;color:var(--t);text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .2s}
+.hero-btn-sec:hover{border-color:var(--g);color:var(--g)}
+.hero-phone-wrap{margin-top:56px;position:relative;display:flex;justify-content:center}
+.hero-phone{width:260px;background:#fff;border-radius:28px;box-shadow:0 24px 80px rgba(0,0,0,.15),0 0 0 2px #e2e8f0;overflow:hidden}
+.hero-phone-bar{height:22px;background:#f8fafc;display:flex;align-items:center;padding:0 10px;gap:4px}
+.hp-dot{width:6px;height:6px;border-radius:50%;background:#e5e7eb}
+.hero-phone-screen{padding:0}
+.hps-header{background:var(--g);color:#fff;padding:14px;text-align:center}
+.hps-header h3{font-size:.9rem;font-weight:900}
+.hps-body{padding:10px}
+.hps-card{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.hps-card h4{font-size:.72rem;font-weight:800;margin-bottom:3px}
+.hps-card p{font-size:.62rem;color:var(--mu);line-height:1.4}
+.hps-btn{display:block;background:var(--g);color:#fff;text-align:center;padding:9px;border-radius:7px;font-size:.75rem;font-weight:900;margin:6px 0}
+.hero-phone-badge{position:absolute;top:20px;right:-20px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:10px 14px;box-shadow:0 4px 16px rgba(0,0,0,.1);font-size:.72rem;font-weight:800;display:flex;align-items:center;gap:8px}
+.hero-phone-badge2{position:absolute;bottom:40px;left:-30px;background:var(--g);color:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 4px 16px rgba(22,163,74,.3);font-size:.72rem;font-weight:800;display:flex;align-items:center;gap:8px}
+
+/* STATS */
+.stats{background:var(--g);color:#fff;padding:40px 24px}
+.stats-inner{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:center}
+.stat-n{font-size:2rem;font-weight:900;margin-bottom:4px}
+.stat-l{font-size:.78rem;font-weight:700;opacity:.85}
+@media(max-width:600px){.stats-inner{grid-template-columns:1fr 1fr}}
+
+/* FEATURES */
+.features{padding:80px 24px;max-width:1000px;margin:0 auto}
+.section-label{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--g);margin-bottom:10px;text-align:center}
+.section-title{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-.03em;text-align:center;margin-bottom:48px}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat-card{padding:24px;border:1.5px solid var(--bd);border-radius:16px;transition:all .2s;cursor:default}
+.feat-card:hover{border-color:var(--g);box-shadow:0 8px 24px rgba(22,163,74,.1);transform:translateY(-2px)}
+.feat-icon{font-size:1.8rem;margin-bottom:14px}
+.feat-name{font-size:1rem;font-weight:900;margin-bottom:8px}
+.feat-desc{font-size:.82rem;color:var(--mu);line-height:1.6}
+@media(max-width:700px){.features-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.features-grid{grid-template-columns:1fr}}
+
+/* STEPS */
+.steps-section{background:var(--gp);padding:80px 24px}
+.steps-inner{max-width:800px;margin:0 auto}
+.steps-list{display:flex;flex-direction:column;gap:0;margin-top:40px}
+.step-item{display:flex;gap:20px;padding-bottom:32px;position:relative}
+.step-item::before{content:'';position:absolute;left:19px;top:40px;bottom:0;width:2px;background:var(--gx)}
+.step-item:last-child::before{display:none}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--g);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:900;flex-shrink:0;z-index:1}
+.step-content{flex:1;padding-top:8px}
+.step-content h3{font-size:1rem;font-weight:900;margin-bottom:6px}
+.step-content p{font-size:.85rem;color:var(--mu);line-height:1.6}
+
+/* PRICING */
+.pricing{padding:80px 24px;max-width:900px;margin:0 auto;text-align:center}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:48px}
+.price-card{border:1.5px solid var(--bd);border-radius:20px;padding:28px 20px;text-align:left;position:relative}
+.price-card.featured{border-color:var(--g);background:var(--gp)}
+.price-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;padding:4px 16px;border-radius:100px;font-size:.68rem;font-weight:900;text-transform:uppercase;white-space:nowrap}
+.price-name{font-size:.85rem;font-weight:800;color:var(--mu);margin-bottom:8px}
+.price-val{font-size:2.2rem;font-weight:900;margin-bottom:4px}
+.price-val span{font-size:.85rem;font-weight:700;color:var(--mu)}
+.price-desc{font-size:.78rem;color:var(--mu);margin-bottom:20px}
+.price-features{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.price-feat{font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.price-feat::before{content:'✓';color:var(--g);font-weight:900}
+.price-btn{display:block;padding:12px;border-radius:10px;text-align:center;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all .2s}
+.price-btn-outline{border:2px solid var(--g);color:var(--g);background:transparent}
+.price-btn-fill{background:var(--g);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)}
+.price-btn:hover{transform:translateY(-1px)}
+@media(max-width:700px){.pricing-grid{grid-template-columns:1fr}}
+
+/* TESTIMONIALS */
+.testis{background:#1f2937;color:#fff;padding:80px 24px}
+.testis-inner{max-width:900px;margin:0 auto}
+.testis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.testi-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px}
+.testi-stars{font-size:.9rem;margin-bottom:10px}
+.testi-text{font-size:.82rem;color:rgba(255,255,255,.8);line-height:1.6;margin-bottom:14px}
+.testi-author{display:flex;align-items:center;gap:10px}
+.testi-avatar{width:36px;height:36px;border-radius:50%;background:var(--g);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem}
+.testi-name{font-size:.82rem;font-weight:800}
+.testi-loc{font-size:.7rem;color:rgba(255,255,255,.5)}
+@media(max-width:700px){.testis-grid{grid-template-columns:1fr}}
+
+/* CTA */
+.cta{padding:80px 24px;text-align:center;background:linear-gradient(135deg,var(--gp),#fff)}
+.cta h2{font-size:clamp(1.6rem,4vw,2.5rem);font-weight:900;letter-spacing:-.03em;margin-bottom:14px}
+.cta p{font-size:.95rem;color:var(--mu);margin-bottom:32px}
+
+/* FOOTER */
+footer{background:#111827;color:#fff;padding:40px 24px 24px}
+.footer-inner{max-width:900px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:32px}
+.footer-brand .footer-logo{font-size:1.1rem;font-weight:900;color:var(--gl);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.footer-brand p{font-size:.78rem;color:rgba(255,255,255,.5);line-height:1.6}
+.footer-col h4{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.5);margin-bottom:12px}
+.footer-col a{display:block;font-size:.8rem;color:rgba(255,255,255,.7);text-decoration:none;margin-bottom:6px;transition:color .15s}
+.footer-col a:hover{color:var(--gl)}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:20px;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:rgba(255,255,255,.4)}
+@media(max-width:700px){.footer-top{grid-template-columns:1fr 1fr}.nav-links .nav-link{display:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html"><div class="nav-logo-icon">📱</div>APK Building</a>
+  <div class="nav-links">
+    <a class="nav-link" href="#features">Fonctionnalités</a>
+    <a class="nav-link" href="#pricing">Tarifs</a>
+    <a class="nav-link" href="devis.html">Devis</a>
+    <a class="nav-btn nav-btn-outline" href="auth.html">Connexion</a>
+    <a class="nav-btn nav-btn-fill" href="auth.html?mode=register">Commencer →</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">⚡ No-Code · Drag & Drop · APK Réel</div>
+  <h1>Crée ton <span>application Android</span> sans coder</h1>
+  <p>Construis, configure et télécharge ta vraie application Android en quelques minutes. Aucune compétence technique requise.</p>
+  <div class="hero-btns">
+    <a class="hero-btn-main" href="auth.html?mode=register">🚀 Créer mon app gratuitement</a>
+    <a class="hero-btn-sec" href="devis.html">💼 Demander un devis</a>
+  </div>
+  <div class="hero-phone-wrap">
+    <div class="hero-phone">
+      <div class="hero-phone-bar"><div class="hp-dot"></div><div class="hp-dot"></div><div class="hp-dot"></div></div>
+      <div class="hero-phone-screen">
+        <div class="hps-header"><h3>📱 MonApp</h3><p style="font-size:.65rem;opacity:.8">Tableau de bord</p></div>
+        <div class="hps-body">
+          <div class="hps-card"><h4>📊 Statistiques</h4><p>2.4K vues · 186 ventes · 94% satisfaction</p></div>
+          <div class="hps-card"><h4>🛒 Nouvelle commande</h4><p>Commande #1234 reçue il y a 5 min</p></div>
+          <div class="hps-btn">Voir les détails</div>
+          <div class="hps-card"><h4>📈 Rapport</h4><p>+12% cette semaine</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-phone-badge">✅ APK téléchargé</div>
+    <div class="hero-phone-badge2">⚡ Build en 2 min</div>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="stats-inner">
+    <div><div class="stat-n">500+</div><div class="stat-l">Apps créées</div></div>
+    <div><div class="stat-n">35+</div><div class="stat-l">Composants disponibles</div></div>
+    <div><div class="stat-n">50+</div><div class="stat-l">Pays représentés</div></div>
+    <div><div class="stat-n">4.8★</div><div class="stat-l">Note moyenne</div></div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="section-label">Fonctionnalités</div>
+  <div class="section-title">Tout ce dont tu as besoin</div>
+  <div class="features-grid">
+    <div class="feat-card"><div class="feat-icon">🎨</div><div class="feat-name">Constructeur visuel</div><div class="feat-desc">Interface drag & drop intuitive avec 35+ composants prêts à l'emploi. Boutons, formulaires, lecteurs, chat...</div></div>
+    <div class="feat-card"><div class="feat-icon">📲</div><div class="feat-name">APK téléchargeable</div><div class="feat-desc">Génère un vrai fichier APK Android installable directement sur ton téléphone, sans passer par le Play Store.</div></div>
+    <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-name">Logiques & Actions</div><div class="feat-desc">Configure la navigation entre pages, les formulaires, les messages, les liens et bien plus — sans une ligne de code.</div></div>
+    <div class="feat-card"><div class="feat-icon">🌐</div><div class="feat-name">Multi-pages</div><div class="feat-desc">Crée autant de pages que tu veux avec des templates : Login, Dashboard, Cours, Musique, Shop, Chat...</div></div>
+    <div class="feat-card"><div class="feat-icon">🔗</div><div class="feat-name">Partage facile</div><div class="feat-desc">Partage ton app avec un lien unique. D'autres utilisateurs peuvent l'installer sans aucune configuration.</div></div>
+    <div class="feat-card"><div class="feat-icon">💼</div><div class="feat-name">Devis développeur</div><div class="feat-desc">Besoin d'une app plus avancée ? Envoie un devis à notre équipe et sois contacté via WhatsApp sous 24h.</div></div>
+    <div class="feat-card"><div class="feat-icon">🎓</div><div class="feat-name">Templates spécialisés</div><div class="feat-desc">Apps de cours en ligne, musique, e-commerce, réseau social, fitness — des templates complets pour chaque besoin.</div></div>
+    <div class="feat-card"><div class="feat-icon">☁️</div><div class="feat-name">Sauvegarde cloud</div><div class="feat-desc">Tous tes projets sont sauvegardés automatiquement sur le cloud. Accède à tes apps depuis n'importe quel appareil.</div></div>
+    <div class="feat-card"><div class="feat-icon">🛡️</div><div class="feat-name">Sécurisé & privé</div><div class="feat-desc">Authentification sécurisée, données chiffrées, confidentialité garantie. Tes apps t'appartiennent.</div></div>
+  </div>
+</section>
+
+<section class="steps-section">
+  <div class="steps-inner">
+    <div class="section-label" style="text-align:center">Comment ça marche</div>
+    <div class="section-title" style="text-align:center">En 4 étapes simples</div>
+    <div class="steps-list">
+      <div class="step-item"><div class="step-num">1</div><div class="step-content"><h3>Crée un compte</h3><p>Inscription rapide avec ton email, ton pays et ton contact WhatsApp. C'est gratuit.</p></div></div>
+      <div class="step-item"><div class="step-num">2</div><div class="step-content"><h3>Construis ton app</h3><p>Utilise le constructeur drag & drop pour ajouter des composants, configurer les pages et personnaliser les couleurs.</p></div></div>
+      <div class="step-item"><div class="step-num">3</div><div class="step-content"><h3>Configure les logiques</h3><p>Définis la navigation, les actions des boutons, les formulaires et les comportements de chaque composant.</p></div></div>
+      <div class="step-item"><div class="step-num">4</div><div class="step-content"><h3>Télécharge ton APK</h3><p>Génère et télécharge ton APK Android en un clic. Installe-le directement sur ton téléphone.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing" id="pricing">
+  <div class="section-label">Tarifs</div>
+  <div class="section-title">Simple et transparent</div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-name">GRATUIT</div>
+      <div class="price-val">0€ <span>/mois</span></div>
+      <div class="price-desc">Pour découvrir et tester</div>
+      <div class="price-features">
+        <div class="price-feat">3 applications</div>
+        <div class="price-feat">Composants de base</div>
+        <div class="price-feat">Téléchargement HTML</div>
+        <div class="price-feat">Partage par lien</div>
+      </div>
+      <a class="price-btn price-btn-outline" href="auth.html?mode=register">Commencer</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-badge">⭐ Populaire</div>
+      <div class="price-name">PRO</div>
+      <div class="price-val">9,99€ <span>/mois</span></div>
+      <div class="price-desc">Pour les créateurs sérieux</div>
+      <div class="price-features">
+        <div class="price-feat">Apps illimitées</div>
+        <div class="price-feat">Tous les composants</div>
+        <div class="price-feat">APK Android natif</div>
+        <div class="price-feat">Logiques avancées</div>
+        <div class="price-feat">Support prioritaire</div>
+        <div class="price-feat">Devis développeur</div>
+      </div>
+      <a class="price-btn price-btn-fill" href="auth.html?mode=register">Choisir Pro</a>
+    </div>
+    <div class="price-card">
+      <div class="price-name">SUR MESURE</div>
+      <div class="price-val">Devis <span>personnalisé</span></div>
+      <div class="price-desc">Développement professionnel</div>
+      <div class="price-features">
+        <div class="price-feat">App développée pour toi</div>
+        <div class="price-feat">Publication Play Store</div>
+        <div class="price-feat">Backend & API</div>
+        <div class="price-feat">Support dédié</div>
+        <div class="price-feat">Contact WhatsApp</div>
+      </div>
+      <a class="price-btn price-btn-outline" href="devis.html">Demander un devis</a>
+    </div>
+  </div>
+</section>
+
+<section class="testis">
+  <div class="testis-inner">
+    <div class="section-label" style="color:var(--gl)">Témoignages</div>
+    <div class="section-title" style="text-align:center">Ils nous font confiance</div>
+    <div class="testis-grid">
+      <div class="testi-card"><div class="testi-stars">⭐⭐⭐⭐⭐</div><div class="testi-text">"J'ai créé mon app de cours en ligne en 2 heures. Le constructeur est incroyablement intuitif et le résultat est professionnel."</div><div class="testi-author"><div class="testi-avatar">K</div><div><div class="testi-name">Kofi A.</div><div class="testi-loc">Ghana</div></div></div></div>
+      <div class="testi-card"><div class="testi-stars">⭐⭐⭐⭐⭐</div><div class="testi-text">"J'ai demandé un devis pour une app e-commerce et j'ai été contacté via WhatsApp le lendemain. Service impeccable."</div><div class="testi-author"><div class="testi-avatar">F</div><div><div class="testi-name">Fatima M.</div><div class="testi-loc">Maroc</div></div></div></div>
+      <div class="testi-card"><div class="testi-stars">⭐⭐⭐⭐⭐</div><div class="testi-text">"Mon app de musique tourne parfaitement sur mon Android. Je n'aurais jamais cru que c'était possible sans programmer."</div><div class="testi-author"><div class="testi-avatar">J</div><div><div class="testi-name">Jean-Paul T.</div><div class="testi-loc">Côte d'Ivoire</div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Prêt à créer ton app ? 🚀</h2>
+  <p>Rejoins des centaines de créateurs qui construisent leurs apps sans coder.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a class="hero-btn-main" href="auth.html?mode=register">Commencer gratuitement →</a>
+    <a class="hero-btn-sec" href="devis.html">💼 Parler à un développeur</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo">📱 APK Building</div>
+        <p>La plateforme no-code pour créer de vraies applications Android. Simple, rapide, puissant.</p>
+      </div>
+      <div class="footer-col"><h4>Produit</h4><a href="auth.html?mode=register">Commencer</a><a href="#features">Fonctionnalités</a><a href="#pricing">Tarifs</a><a href="devis.html">Devis</a></div>
+      <div class="footer-col"><h4>Compte</h4><a href="auth.html">Connexion</a><a href="auth.html?mode=register">Inscription</a><a href="dashboard.html">Dashboard</a><a href="profile.html">Mon profil</a></div>
+      <div class="footer-col"><h4>Support</h4><a href="profile.html#contact">Contact</a><a href="devis.html">Développeur</a><a href="#">Conditions</a><a href="#">Confidentialité</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 APK Building. Tous droits réservés.</span><span>Made with ❤️</span></div>
+  </div>
+</footer>
+</body>
+</html>
