@@ -2,1397 +2,1139 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>APK Building — Constructeur</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>APK Building — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --g:#16a34a;--gd:#15803d;--gl:#22c55e;--gx:#dcfce7;--gp:#f0fdf4;
   --t:#111827;--t2:#374151;--mu:#6b7280;--bd:#e5e7eb;--w:#fff;
-  --red:#ef4444;--blue:#3b82f6;--yw:#f59e0b;--pu:#8b5cf6;
-  --sh:0 2px 12px rgba(0,0,0,0.08);--shl:0 8px 32px rgba(0,0,0,0.12);
-  --r:12px;--rs:7px;
+  --red:#ef4444;--blue:#3b82f6;--yw:#f59e0b;
 }
-body{font-family:'Nunito',sans-serif;background:#f1f5f9;color:var(--t);min-height:100vh;overflow:hidden}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Nunito',sans-serif;background:#f1f5f9;color:var(--t);display:flex;flex-direction:column}
 
-/* ── SHELL ── */
-.shell{display:grid;grid-template-rows:52px 1fr;grid-template-columns:220px 1fr 280px;height:100vh}
-@media(max-width:900px){.shell{grid-template-columns:180px 1fr;grid-template-rows:52px 1fr 1fr}.right-panel{display:none!important}}
-@media(max-width:600px){.shell{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}.left-panel{position:fixed;left:-220px;top:52px;z-index:50;transition:left .3s;height:calc(100vh - 52px)}.left-panel.open{left:0}}
+/* LOADING */
+#LS{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999}
+.ls-icon{font-size:3.5rem;animation:bop .8s ease-in-out infinite alternate}
+@keyframes bop{from{transform:scale(1)}to{transform:scale(1.1)}}
+.ls-msg{font-size:.82rem;font-weight:700;color:var(--mu);margin-top:4px}
+.ls-err{font-size:.8rem;color:var(--red);font-weight:700;max-width:300px;text-align:center;display:none;line-height:1.5}
 
-/* ── TOPBAR ── */
-.topbar{grid-column:1/-1;background:var(--g);color:#fff;display:flex;align-items:center;padding:0 14px;gap:10px;box-shadow:0 2px 8px rgba(22,163,74,.3);z-index:40}
-.tb-logo{font-size:.95rem;font-weight:900;display:flex;align-items:center;gap:8px;margin-right:12px}
-.tb-logo-i{font-size:1.1rem}
-.tb-app-name{font-size:.88rem;font-weight:700;background:rgba(255,255,255,.15);padding:5px 12px;border-radius:6px;min-width:100px;border:none;color:#fff;cursor:text;outline:none}
-.tb-app-name::placeholder{color:rgba(255,255,255,.6)}
-.tb-sep{width:1px;height:28px;background:rgba(255,255,255,.2);margin:0 6px}
-.tb-page-tabs{display:flex;gap:2px;flex:1;overflow-x:auto}
-.tb-page-tab{padding:5px 12px;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;border:none;background:transparent;color:rgba(255,255,255,.7);transition:all .15s}
-.tb-page-tab.active{background:rgba(255,255,255,.2);color:#fff}
-.tb-page-tab:hover{background:rgba(255,255,255,.12);color:#fff}
-.tb-add-page{padding:5px 10px;border-radius:6px;border:1px dashed rgba(255,255,255,.4);background:transparent;color:rgba(255,255,255,.7);font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
-.tb-add-page:hover{border-color:#fff;color:#fff}
-.tb-actions{display:flex;gap:6px;margin-left:auto}
-.tb-btn{padding:6px 14px;border-radius:7px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
-.tb-btn-white{background:#fff;color:var(--g)}
-.tb-btn-white:hover{box-shadow:0 2px 8px rgba(255,255,255,.3)}
-.tb-btn-outline{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}
-.tb-btn-outline:hover{background:rgba(255,255,255,.25)}
-
-/* ── LEFT PANEL ── */
-.left-panel{background:#fff;border-right:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column}
-.panel-section{border-bottom:1px solid var(--bd)}
-.panel-section-title{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);padding:10px 12px 6px;display:flex;align-items:center;justify-content:space-between}
-.panel-section-title span{cursor:pointer;font-size:.8rem;color:var(--g)}
-.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 10px}
-.comp-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--gp);border:1.5px solid var(--bd);border-radius:var(--rs);cursor:grab;transition:all .15s;text-align:center;user-select:none}
-.comp-item:hover{border-color:var(--g);background:var(--gx);transform:translateY(-1px)}
-.comp-item:active{cursor:grabbing}
-.comp-icon{font-size:1.3rem;line-height:1}
-.comp-name{font-size:.65rem;font-weight:800;color:var(--t2)}
-.comp-list{display:flex;flex-direction:column;gap:4px;padding:8px 10px}
-.comp-list-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--gp);border:1.5px solid var(--bd);border-radius:var(--rs);cursor:grab;transition:all .15s;user-select:none}
-.comp-list-item:hover{border-color:var(--g);background:var(--gx)}
-.comp-list-item .ci{font-size:1rem;width:22px;text-align:center}
-.comp-list-item .cn{font-size:.75rem;font-weight:700;color:var(--t2)}
-.comp-list-item .ct{font-size:.62rem;color:var(--mu);font-weight:600}
-.search-box{padding:8px 10px}
-.search-input{width:100%;border:1.5px solid var(--bd);border-radius:var(--rs);padding:8px 10px;font-size:.82rem;font-family:'Nunito',sans-serif;outline:none;transition:border-color .2s}
-.search-input:focus{border-color:var(--g)}
-.pages-list{padding:8px 10px;display:flex;flex-direction:column;gap:4px}
-.page-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;font-size:.78rem;font-weight:700;transition:all .15s;border:1.5px solid transparent}
-.page-item:hover{background:var(--gp);border-color:var(--bd)}
-.page-item.active{background:var(--gx);border-color:var(--g);color:var(--gd)}
-.page-icon{font-size:.9rem}
-.page-del{margin-left:auto;color:var(--mu);font-size:.85rem;cursor:pointer;opacity:0;transition:opacity .15s}
-.page-item:hover .page-del{opacity:1}
-.page-del:hover{color:var(--red)}
-
-/* ── CANVAS ── */
-.canvas-wrap{overflow:auto;background:#e2e8f0;display:flex;align-items:flex-start;justify-content:center;padding:20px;position:relative}
-.canvas-phone{width:375px;min-height:667px;background:#fff;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.2),0 0 0 2px #94a3b8;position:relative;overflow:hidden;flex-shrink:0}
-.canvas-phone-bar{height:28px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 14px;gap:6px}
-.canvas-phone-bar .dot{width:8px;height:8px;border-radius:50%;background:#e5e7eb}
-.canvas-phone-bar .addr{flex:1;background:#e5e7eb;height:16px;border-radius:100px;margin:0 8px}
-.canvas-body{min-height:600px;position:relative}
-.drop-zone{min-height:60px;border:2px dashed transparent;border-radius:var(--r);transition:all .2s;position:relative}
-.drop-zone.drag-over{border-color:var(--g);background:rgba(22,163,74,.04)}
-.drop-zone-hint{display:none;text-align:center;padding:24px;color:var(--mu);font-size:.8rem;font-weight:700}
-.drop-zone.empty .drop-zone-hint{display:block}
-/* RENDERED COMPONENTS */
-.r-comp{position:relative;cursor:pointer;transition:outline .1s}
-.r-comp:hover{outline:2px solid var(--gl)}
-.r-comp.selected{outline:2px solid var(--g)!important}
-.r-comp-actions{position:absolute;top:-28px;right:0;display:none;gap:4px;z-index:10}
-.r-comp.selected .r-comp-actions{display:flex}
-.r-ca-btn{padding:3px 8px;font-size:.65rem;font-weight:800;border-radius:5px;border:none;cursor:pointer;font-family:'Nunito',sans-serif}
-.r-ca-up{background:#fff;border:1px solid var(--bd);color:var(--mu)}
-.r-ca-down{background:#fff;border:1px solid var(--bd);color:var(--mu)}
-.r-ca-del{background:var(--red);color:#fff}
-.r-ca-dup{background:var(--blue);color:#fff}
-/* Canvas zoom controls */
-.canvas-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:4px;z-index:10}
-.canvas-ctrl-btn{width:32px;height:32px;background:#fff;border:1px solid var(--bd);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;box-shadow:var(--sh);transition:all .15s}
-.canvas-ctrl-btn:hover{border-color:var(--g)}
-
-/* ── RIGHT PANEL ── */
-.right-panel{background:#fff;border-left:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column}
-.rp-header{padding:12px 14px;border-bottom:1px solid var(--bd);font-size:.82rem;font-weight:900;color:var(--t);display:flex;align-items:center;gap:8px}
-.rp-tabs{display:flex;border-bottom:1px solid var(--bd)}
-.rp-tab{flex:1;padding:10px;font-size:.72rem;font-weight:800;text-align:center;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;transition:all .15s}
-.rp-tab.active{color:var(--g);border-bottom-color:var(--g)}
-.rp-body{flex:1;padding:14px;overflow-y:auto}
-.prop-group{margin-bottom:18px}
-.prop-group-title{font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:10px}
-.prop-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.prop-label{font-size:.72rem;font-weight:700;color:var(--t2)}
-.prop-input{border:1.5px solid var(--bd);border-radius:var(--rs);padding:7px 10px;font-size:.8rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;width:100%;transition:border-color .2s}
-.prop-input:focus{border-color:var(--g)}
-.prop-select{-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%236b7280' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-.prop-row-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.color-row{display:flex;gap:6px;align-items:center}
-.color-swatch{width:32px;height:32px;border-radius:var(--rs);border:2px solid var(--bd);cursor:pointer;flex-shrink:0}
-.prop-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
-.toggle{width:38px;height:20px;background:#d1d5db;border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
-.toggle.on{background:var(--g)}
-.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.toggle.on::after{left:20px}
-.no-selection{text-align:center;padding:32px 14px;color:var(--mu)}
-.no-sel-icon{font-size:2.5rem;margin-bottom:10px}
-.no-sel-text{font-size:.82rem;font-weight:700}
-.no-sel-sub{font-size:.72rem;margin-top:4px}
-/* App settings panel */
-.app-settings{padding:14px}
-.as-section{margin-bottom:20px}
-.as-title{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:10px}
-.color-picker-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.color-opt{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s}
-.color-opt.sel{border-color:#111}
-.logic-list{display:flex;flex-direction:column;gap:6px}
-.logic-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--gp);border:1.5px solid var(--bd);border-radius:var(--rs);font-size:.75rem;font-weight:700}
-.logic-icon{font-size:.9rem}
-.logic-add{display:flex;align-items:center;gap:6px;padding:8px 10px;border:2px dashed var(--bd);border-radius:var(--rs);color:var(--mu);font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;margin-top:6px}
-.logic-add:hover{border-color:var(--g);color:var(--g)}
-
-/* ── TOAST ── */
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f2937;color:#fff;padding:10px 18px;border-radius:100px;font-size:.8rem;font-weight:700;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.ok{background:var(--g)}
-.toast.err{background:var(--red)}
-
-/* ── MODAL ── */
-.modal-o{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
-.modal-o.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:var(--shl)}
-.modal h3{font-size:1rem;font-weight:900;margin-bottom:6px}
-.modal p{font-size:.82rem;color:var(--mu);margin-bottom:16px}
-.modal-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
-.mbtn{padding:10px 18px;border-radius:var(--rs);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;border:none;transition:all .2s}
-.mbtn-g{background:var(--g);color:#fff}
-.mbtn-g:hover{background:var(--gd)}
-.mbtn-w{background:#f3f4f6;color:var(--t2)}
-
-/* ── COMPONENT STYLES rendered in canvas ── */
-/* These are the actual rendered component styles */
-.rc-header{background:var(--app-primary,#16a34a);color:#fff;padding:16px;text-align:center}
-.rc-header h1{font-size:1.3rem;font-weight:900}
-.rc-header p{font-size:.8rem;opacity:.85;margin-top:3px}
-.rc-hero{padding:24px 16px;text-align:center}
-.rc-hero h2{font-size:1.4rem;font-weight:900;margin-bottom:8px}
-.rc-hero p{font-size:.85rem;color:var(--mu);line-height:1.5}
-.rc-hero img{width:80px;height:80px;object-fit:cover;border-radius:16px;margin-bottom:12px}
-.rc-btn{display:block;width:calc(100% - 32px);margin:8px 16px;padding:14px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:800;border:none;cursor:pointer;text-align:center;transition:all .2s}
-.rc-btn-primary{background:var(--app-primary,#16a34a);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3)}
-.rc-btn-secondary{background:#f3f4f6;color:var(--t2)}
-.rc-btn-outline{background:transparent;border:2px solid var(--app-primary,#16a34a);color:var(--app-primary,#16a34a)}
-.rc-btn-danger{background:#ef4444;color:#fff}
-.rc-text{padding:12px 16px;font-size:.88rem;line-height:1.6;color:var(--t2)}
-.rc-text h3{font-size:1rem;font-weight:900;color:var(--t);margin-bottom:6px}
-.rc-input-wrap{padding:8px 16px}
-.rc-input-wrap label{display:block;font-size:.72rem;font-weight:800;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
-.rc-input{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:11px 13px;font-size:.88rem;font-family:'Nunito',sans-serif;outline:none;background:#fff}
-.rc-input:focus{border-color:var(--app-primary,#16a34a)}
-.rc-input[type=password]{letter-spacing:.2em}
-.rc-select{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:11px 13px;font-size:.88rem;font-family:'Nunito',sans-serif;outline:none;background:#fff;cursor:pointer}
-.rc-card{margin:10px 16px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.rc-card h4{font-size:.88rem;font-weight:800;margin-bottom:6px}
-.rc-card p{font-size:.78rem;color:var(--mu);line-height:1.5}
-.rc-image{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;overflow:hidden;background:#e2e8f0;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:.8rem;font-weight:700}
-.rc-image img{width:100%;height:100%;object-fit:cover}
-.rc-list{padding:8px 16px}
-.rc-list-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)}
-.rc-list-item:last-child{border-bottom:none}
-.rc-list-icon{font-size:1.2rem;width:32px;text-align:center}
-.rc-list-text{flex:1}
-.rc-list-title{font-size:.88rem;font-weight:700}
-.rc-list-sub{font-size:.72rem;color:var(--mu);margin-top:2px}
-.rc-list-arrow{color:var(--mu);font-size:.85rem}
-.rc-divider{height:1px;background:var(--bd);margin:8px 16px}
-.rc-spacer{height:16px}
-.rc-badge-row{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px}
-.rc-badge{display:inline-block;font-size:.72rem;font-weight:800;padding:4px 12px;border-radius:100px;background:var(--gx);color:var(--gd);border:1px solid #86efac}
-.rc-tabs{display:flex;border-bottom:2px solid var(--bd);margin:0 16px}
-.rc-tab{flex:1;padding:10px;text-align:center;font-size:.78rem;font-weight:800;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
-.rc-tab.active{color:var(--app-primary,#16a34a);border-bottom-color:var(--app-primary,#16a34a)}
-.rc-progress-wrap{padding:8px 16px}
-.rc-progress-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;margin-bottom:5px}
-.rc-progress-bar{height:8px;background:#e5e7eb;border-radius:100px;overflow:hidden}
-.rc-progress-fill{height:100%;background:var(--app-primary,#16a34a);border-radius:100px}
-.rc-video{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;overflow:hidden;background:#1f2937;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:8px}
-.rc-video .play{font-size:2.5rem;opacity:.8}
-.rc-video .vt{font-size:.78rem;opacity:.6}
-.rc-audio{margin:8px 16px;background:#f8fafc;border:1.5px solid var(--bd);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px}
-.rc-audio .a-icon{font-size:1.6rem}
-.rc-audio .a-info{flex:1}
-.rc-audio .a-title{font-size:.85rem;font-weight:700}
-.rc-audio .a-time{font-size:.72rem;color:var(--mu)}
-.rc-audio .a-bar{height:4px;background:#e5e7eb;border-radius:100px;margin-top:6px;overflow:hidden}
-.rc-audio .a-fill{height:100%;width:40%;background:var(--app-primary,#16a34a);border-radius:100px}
-.rc-rating{padding:8px 16px;display:flex;gap:4px;align-items:center}
-.rc-rating .star{font-size:1.4rem;cursor:pointer}
-.rc-rating .rt{font-size:.75rem;color:var(--mu);margin-left:8px;font-weight:700}
-.rc-map{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;overflow:hidden;background:#e2e8f0;height:160px;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:.85rem;font-weight:700;flex-direction:column;gap:6px}
-.rc-social{padding:12px 16px;display:flex;gap:10px}
-.rc-social-btn{flex:1;padding:10px;border-radius:10px;border:none;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
-.rc-social-fb{background:#1877f2;color:#fff}
-.rc-social-gg{background:#fff;color:#374151;border:1.5px solid var(--bd)}
-.rc-social-wa{background:#25d366;color:#fff}
-.rc-chat-bubble{padding:6px 16px;display:flex;gap:8px;align-items:flex-end}
-.rc-chat-bubble .cb-msg{padding:10px 14px;border-radius:16px;max-width:75%;font-size:.82rem;line-height:1.4}
-.rc-chat-bubble.sent{flex-direction:row-reverse}
-.rc-chat-bubble .cb-msg.recv{background:#f3f4f6;color:var(--t)}
-.rc-chat-bubble .cb-msg.sent{background:var(--app-primary,#16a34a);color:#fff;border-radius:16px 16px 4px 16px}
-.rc-cb-time{font-size:.62rem;color:var(--mu)}
-.rc-form-wrap{margin:10px 16px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:16px}
-.rc-form-title{font-size:.95rem;font-weight:900;margin-bottom:14px;color:var(--g)}
-.rc-checkbox-wrap{display:flex;align-items:center;gap:10px;padding:8px 16px}
-.rc-checkbox-wrap input{width:18px;height:18px;accent-color:var(--g)}
-.rc-checkbox-wrap label{font-size:.82rem;font-weight:700}
-.rc-switch-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bd)}
-.rc-switch-label{font-size:.85rem;font-weight:700}
-.rc-sw{width:44px;height:24px;background:#d1d5db;border-radius:100px;position:relative;cursor:pointer}
-.rc-sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.rc-sw.on{background:var(--g)}
-.rc-sw.on::after{left:23px}
-.rc-countdown{text-align:center;padding:20px 16px;background:var(--gp)}
-.rc-countdown .cd-time{font-size:2.5rem;font-weight:900;color:var(--g);font-family:'DM Mono',monospace;letter-spacing:.05em}
-.rc-countdown .cd-label{font-size:.72rem;color:var(--mu);font-weight:700;margin-top:4px}
-.rc-price-card{margin:10px 16px;background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;border-radius:16px;padding:20px;text-align:center}
-.rc-price-card .pc-name{font-size:.85rem;font-weight:700;opacity:.85;margin-bottom:4px}
-.rc-price-card .pc-price{font-size:2rem;font-weight:900;margin-bottom:8px}
-.rc-price-card .pc-feat{font-size:.75rem;opacity:.85;margin-bottom:4px;display:flex;align-items:center;gap:6px;justify-content:center}
-.rc-share-bar{display:flex;gap:8px;padding:10px 16px;overflow-x:auto}
-.rc-share-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
-.rc-share-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
-.rc-share-label{font-size:.62rem;font-weight:700;color:var(--mu)}
-.rc-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 16px}
-.rc-stat{background:var(--gp);border:1px solid var(--gx);border-radius:10px;padding:14px;text-align:center}
-.rc-stat .sv{font-size:1.4rem;font-weight:900;color:var(--g)}
-.rc-stat .sl{font-size:.65rem;font-weight:700;color:var(--mu);text-transform:uppercase}
-.rc-course-card{margin:10px 16px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;overflow:hidden}
-.rc-course-img{height:100px;background:linear-gradient(135deg,var(--g),var(--gl));display:flex;align-items:center;justify-content:center;font-size:2.5rem}
-.rc-course-body{padding:12px}
-.rc-course-title{font-size:.88rem;font-weight:800;margin-bottom:4px}
-.rc-course-meta{font-size:.72rem;color:var(--mu);font-weight:600;display:flex;gap:10px;margin-bottom:8px}
-.rc-course-prog{height:5px;background:#e5e7eb;border-radius:100px;overflow:hidden}
-.rc-course-prog-fill{height:100%;background:var(--g);border-radius:100px}
-.rc-music-player{margin:10px 16px;background:linear-gradient(135deg,#1f2937,#374151);border-radius:16px;padding:20px;color:#fff;text-align:center}
-.rc-mp-cover{width:80px;height:80px;border-radius:12px;background:linear-gradient(135deg,var(--g),var(--gl));margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
-.rc-mp-title{font-size:.92rem;font-weight:800;margin-bottom:2px}
-.rc-mp-artist{font-size:.75rem;opacity:.7;margin-bottom:14px}
-.rc-mp-controls{display:flex;align-items:center;justify-content:center;gap:16px}
-.rc-mp-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer}
-.rc-mp-btn.play{width:50px;height:50px;font-size:1.3rem;background:var(--g)}
-.rc-notif{margin:8px 16px;display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#fff;border-left:3px solid var(--g);border-radius:8px;box-shadow:var(--sh)}
-.rc-notif .ni{font-size:1.1rem;margin-top:2px}
-.rc-notif .nt{font-size:.82rem;font-weight:700;margin-bottom:2px}
-.rc-notif .ns{font-size:.72rem;color:var(--mu)}
-.rc-bottom-nav{display:flex;background:#fff;border-top:1px solid var(--bd);position:sticky;bottom:0}
-.rc-bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px;font-size:.6rem;font-weight:700;color:var(--mu);cursor:pointer;gap:3px}
-.rc-bnav-item.active{color:var(--g)}
-.rc-bnav-icon{font-size:1.2rem}
-
-/* ── LOADING ── */
-.loading{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:300}
-.loading-icon{font-size:3rem;animation:bounce .7s infinite alternate}
-@keyframes bounce{from{transform:scale(1)}to{transform:scale(1.12)}}
-.loading-text{font-size:.88rem;font-weight:700;color:var(--mu)}
-.spin{width:20px;height:20px;border:2.5px solid rgba(22,163,74,.2);border-top-color:var(--g);border-radius:50%;animation:spin .6s linear infinite}
+/* SPINNER */
+.spin{border:3px solid rgba(22,163,74,.2);border-top-color:var(--g);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── PUBLISH MODAL ── */
-.pub-share-link{background:var(--gp);border:1.5px solid var(--g);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:.75rem;word-break:break-all;margin-bottom:8px}
-.qr-placeholder{width:120px;height:120px;background:#f3f4f6;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 10px}
+/* VIEWS */
+.view{display:none;flex:1;overflow:hidden;flex-direction:column}
+.view.active{display:flex}
 
-/* RESPONSIVE PANEL TABS on mobile */
-@media(max-width:600px){
-  .canvas-phone{width:320px}
-  .shell{overflow:hidden}
-}
+/* ══ HOME ══ */
+#homeView{overflow-y:auto;padding-bottom:70px}
+.home-top{background:var(--g);padding:16px;color:#fff}
+.home-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.home-logo{display:flex;align-items:center;gap:8px;font-size:.95rem;font-weight:900}
+.home-logo-i{width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.admin-link{background:rgba(255,255,255,.2);padding:5px 12px;border-radius:100px;font-size:.65rem;font-weight:900;text-decoration:none;color:#fff;display:none}
+.hero-card{background:rgba(255,255,255,.15);border-radius:14px;padding:18px}
+.hero-greet{font-size:.85rem;font-weight:700;opacity:.85;margin-bottom:3px}
+.hero-name{font-size:1.3rem;font-weight:900;margin-bottom:14px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hs{background:rgba(255,255,255,.2);border-radius:10px;padding:10px;text-align:center}
+.hs-n{font-size:1.4rem;font-weight:900;line-height:1}
+.hs-l{font-size:.58rem;font-weight:800;opacity:.85;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+
+.home-body{padding:14px}
+.sec-hd{font-size:.9rem;font-weight:900;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.sec-hd button{font-size:.75rem;font-weight:800;color:var(--g);border:none;background:transparent;cursor:pointer;padding:6px 12px;border-radius:8px;transition:background .15s}
+.sec-hd button:hover{background:var(--gp)}
+
+.app-row{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:all .15s}
+.app-row:hover{border-color:var(--g);box-shadow:0 3px 12px rgba(22,163,74,.1)}
+.app-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;background:linear-gradient(135deg,var(--g),var(--gl))}
+.app-info{flex:1;min-width:0}
+.app-name{font-size:.9rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.app-cat{font-size:.68rem;color:var(--mu);font-weight:600}
+.app-prog{height:3px;background:#e5e7eb;border-radius:100px;margin-top:6px;overflow:hidden}
+.app-prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--g),var(--gl));transition:width .3s}
+.app-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.ab{padding:5px 10px;border-radius:7px;font-family:'Nunito',sans-serif;font-size:.68rem;font-weight:800;cursor:pointer;border:1.5px solid;transition:all .15s}
+.ab-edit{background:var(--gp);border-color:var(--g);color:var(--gd)}
+.ab-del{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+.badge{display:inline-block;font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:100px;text-transform:uppercase}
+.bg-g{background:var(--gx);color:var(--gd)}
+.bg-gray{background:#f3f4f6;color:var(--mu)}
+
+.empty-card{background:#fff;border:1.5px solid var(--bd);border-radius:14px;padding:32px 20px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.empty-icon{font-size:2.5rem;margin-bottom:10px}
+.empty-title{font-size:.95rem;font-weight:900;margin-bottom:5px}
+.empty-sub{font-size:.78rem;color:var(--mu);font-weight:600;margin-bottom:16px}
+
+/* ══ BUILDER ══ */
+#builderView{flex-direction:column}
+.bld-top{background:var(--g);color:#fff;display:flex;align-items:center;padding:0 10px;height:50px;gap:8px;flex-shrink:0}
+.bld-back{background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bld-name{background:rgba(255,255,255,.15);border:none;color:#fff;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:700;padding:5px 10px;border-radius:7px;flex:1;min-width:0;outline:none}
+.bld-name::placeholder{color:rgba(255,255,255,.5)}
+.save-ind{font-family:'DM Mono',monospace;font-size:.6rem;background:rgba(255,255,255,.15);padding:3px 9px;border-radius:100px;flex-shrink:0;white-space:nowrap}
+.bld-acts{display:flex;gap:5px;flex-shrink:0}
+.ba{padding:6px 10px;border-radius:7px;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer;border:none;white-space:nowrap}
+.ba-w{background:#fff;color:var(--g)}
+.ba-o{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4)}
+
+.step-tabs{display:flex;background:#fff;border-bottom:2px solid var(--bd);overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
+.st{flex:none;padding:11px 13px;font-size:.7rem;font-weight:800;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap;border-top:none;border-left:none;border-right:none;background:transparent;transition:all .15s}
+.st.active{color:var(--g);border-bottom-color:var(--g)}
+.st.done{color:var(--gd)}
+
+.bld-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:80px}
+.panel{display:none}
+.panel.active{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.ph{font-size:1rem;font-weight:900;margin-bottom:3px}
+.ps{font-size:.78rem;color:var(--mu);font-weight:600;margin-bottom:18px}
+
+/* FORM */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.67rem;font-weight:900;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.req{color:var(--red)}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:10px 12px;font-size:.88rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;transition:border-color .2s,box-shadow .2s;background:#fff;-webkit-appearance:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.field select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%236b7280' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ferr{font-size:.68rem;color:var(--red);font-weight:800;margin-top:4px;display:none}
+.ferr.show{display:block}
+.vmsg{font-size:.72rem;color:var(--red);font-weight:800;margin:8px 0;display:none}
+.vmsg.show{display:block}
+
+/* EMOJI */
+.emoji-row{display:flex;gap:10px;align-items:center}
+.emoji-btn{width:50px;height:50px;border:1.5px solid var(--bd);border-radius:10px;background:#fff;font-size:1.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s}
+.emoji-btn:hover{border-color:var(--g)}
+.emoji-picker{display:none;flex-wrap:wrap;gap:5px;padding:10px;background:#fff;border:1.5px solid var(--bd);border-radius:9px;margin-top:7px;max-height:130px;overflow-y:auto}
+.e-o{font-size:1.3rem;cursor:pointer;padding:5px;border-radius:6px;transition:background .1s}
+.e-o:hover{background:var(--gx)}
+
+/* TAGS */
+.tags-box{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:#fff;border:1.5px solid var(--bd);border-radius:8px;min-height:44px;align-items:center;cursor:text;transition:border-color .2s}
+.tags-box:focus-within{border-color:var(--g)}
+.tag{display:flex;align-items:center;gap:4px;background:var(--gx);border:1px solid #86efac;color:var(--gd);padding:3px 9px;border-radius:100px;font-size:.7rem;font-weight:800}
+.tag-x{cursor:pointer;opacity:.6;font-size:.8rem;line-height:1}
+.tag-x:hover{opacity:1}
+.tag-inp{border:none;background:transparent;font-family:'Nunito',sans-serif;font-size:.82rem;outline:none;flex:1;min-width:60px;color:var(--t)}
+
+/* FEATURES */
+.feat-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.feat-card{background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:12px;transition:border-color .15s}
+.feat-card:hover{border-color:rgba(22,163,74,.3)}
+.feat-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.feat-icon{width:40px;height:40px;border:1.5px solid var(--bd);border-radius:9px;background:var(--gp);font-size:1.3rem;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:border-color .15s;user-select:none}
+.feat-icon:hover{border-color:var(--g)}
+.feat-inputs{flex:1;display:flex;flex-direction:column;gap:6px}
+.feat-inputs input{border:1.5px solid var(--bd);border-radius:7px;padding:7px 10px;font-size:.8rem;font-family:'Nunito',sans-serif;color:var(--t);outline:none;width:100%;transition:border-color .2s;background:#fff}
+.feat-inputs input:focus{border-color:var(--g)}
+.feat-foot{display:flex;align-items:center;justify-content:space-between}
+.prio-btns{display:flex;gap:4px}
+.pb{font-size:.62rem;font-weight:900;padding:4px 9px;border-radius:100px;border:1.5px solid var(--bd);background:transparent;color:var(--mu);cursor:pointer;transition:all .15s}
+.pb.mvp{border-color:var(--g);color:var(--gd);background:var(--gx)}
+.pb.v2{border-color:var(--yw);color:#92400e;background:#fef3c7}
+.pb.v3{border-color:var(--blue);color:#1e40af;background:#dbeafe}
+.del-feat{background:none;border:none;color:#d1d5db;cursor:pointer;font-size:1rem;padding:3px;transition:color .15s}
+.del-feat:hover{color:var(--red)}
+.add-feat{width:100%;padding:11px;border:2px dashed #d1d5db;border-radius:9px;background:transparent;color:var(--mu);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.add-feat:hover{border-color:var(--g);color:var(--gd)}
+
+/* COLOR */
+.color-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.col-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s}
+.col-opt.sel{border-color:#111;transform:scale(1.15)}
+
+/* PALETTE */
+.pal-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.pal-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;transition:all .15s}
+.pal-opt:hover{border-color:rgba(22,163,74,.4)}
+.pal-opt.sel{border-color:var(--g);background:var(--gp)}
+.pal-sw{display:flex;gap:3px}
+.ps2{width:20px;height:20px;border-radius:4px;border:1px solid rgba(0,0,0,.07)}
+.pal-name{font-size:.82rem;font-weight:800}
+.pal-desc{font-size:.65rem;color:var(--mu);font-weight:600}
+
+/* STYLE */
+.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.sty-card{padding:12px;background:#fff;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;transition:all .15s;text-align:center}
+.sty-card:hover{border-color:rgba(22,163,74,.4)}
+.sty-card.sel{border-color:var(--g);background:var(--gp)}
+.sty-icon{font-size:1.5rem;margin-bottom:5px}
+.sty-name{font-size:.8rem;font-weight:800}
+.sty-desc{font-size:.63rem;color:var(--mu);font-weight:600}
+
+/* SUMMARY */
+.sum-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px}
+.sum-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.sum-icon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0}
+.sum-name{font-size:1.1rem;font-weight:900}
+.sum-tag{font-size:.68rem;color:var(--mu);font-weight:600}
+.sum-desc{font-size:.82rem;color:var(--t2);line-height:1.6;margin-bottom:10px}
+.sum-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:100px;border:1.5px solid var(--bd);color:var(--t2)}
+
+.sect-box{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px}
+.sect-tit{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--gd);margin-bottom:10px}
+.roadmap{display:flex;flex-direction:column}
+.rph{padding-left:26px;padding-bottom:16px;position:relative}
+.rph::before{content:'';position:absolute;left:9px;top:20px;bottom:0;width:1.5px;background:var(--bd)}
+.rph:last-child::before{display:none}
+.rph-dot{position:absolute;left:0;top:3px;width:20px;height:20px;border-radius:50%;background:var(--g);display:flex;align-items:center;justify-content:center;font-size:.52rem;font-family:'DM Mono',monospace;color:#fff;font-weight:700}
+.rph-t{font-size:.82rem;font-weight:900;margin-bottom:2px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.rph-d{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--mu)}
+.rph-tasks{margin-top:4px;display:flex;flex-direction:column;gap:2px}
+.rph-task{font-size:.72rem;color:var(--mu);font-weight:600;display:flex;align-items:flex-start;gap:5px}
+.rph-task::before{content:'›';color:var(--g);flex-shrink:0}
+.stack-sec{margin-bottom:10px}
+.stack-lbl{font-size:.65rem;font-weight:900;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stack-pills{display:flex;flex-wrap:wrap;gap:4px}
+.spill{font-family:'DM Mono',monospace;font-size:.65rem;padding:4px 9px;border:1.5px solid var(--bd);border-radius:6px;background:#fff;color:var(--t2)}
+
+/* BUILD CARD */
+.build-card{background:linear-gradient(135deg,var(--gp),#fff);border:2px solid var(--gl);border-radius:14px;padding:20px;text-align:center;margin-bottom:12px}
+.build-icon{font-size:2.5rem;margin-bottom:10px}
+.build-title{font-size:1rem;font-weight:900;color:var(--gd);margin-bottom:5px}
+.build-sub{font-size:.78rem;color:var(--mu);font-weight:600;margin-bottom:16px;line-height:1.5}
+.build-prog{height:7px;background:#d1fae5;border-radius:100px;margin:12px 0;overflow:hidden;display:none}
+.build-prog-bar{height:100%;background:linear-gradient(90deg,var(--g),var(--gl));border-radius:100px;transition:width .4s;width:0}
+.build-status{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--mu);margin:6px 0;display:none}
+.build-logs{background:#f8fafc;border:1px solid var(--bd);border-radius:7px;padding:10px;font-family:'DM Mono',monospace;font-size:.66rem;color:var(--t2);max-height:100px;overflow-y:auto;text-align:left;display:none;line-height:1.8;margin-top:8px}
+.dl-btn{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;padding:13px 20px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:900;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px;width:100%;box-shadow:0 5px 16px rgba(22,163,74,.35);transition:all .2s;margin-top:8px}
+.dl-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(22,163,74,.45)}
+.dl-btn.show{display:flex}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:900;border:none;cursor:pointer;transition:all .2s}
+.btn-g{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;box-shadow:0 3px 10px rgba(22,163,74,.3)}
+.btn-g:hover{transform:translateY(-1px)}
+.btn-g:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.btn-sm{padding:8px 16px;font-size:.78rem;width:auto}
+
+.step-acts{display:flex;gap:10px;margin-top:22px;padding-top:16px;border-top:1px solid var(--bd)}
+.btn-prev{background:transparent;border:1.5px solid var(--bd);color:var(--mu);padding:10px 18px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;transition:all .15s}
+.btn-prev:hover{border-color:var(--t);color:var(--t)}
+.btn-next{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;padding:10px 22px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:900;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;box-shadow:0 3px 10px rgba(22,163,74,.3)}
+.btn-next:hover{transform:translateY(-1px)}
+.save-exit{background:linear-gradient(135deg,var(--g),var(--gl));color:#fff;padding:10px 18px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:900;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(22,163,74,.3)}
+
+/* TOAST */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%) translateY(14px);background:#1f2937;color:#fff;padding:9px 16px;border-radius:100px;font-size:.78rem;font-weight:800;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none;max-width:88vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--g)}.toast.err{background:var(--red)}
+
+/* MODAL */
+.modal-o{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.modal-o.open{display:flex}
+.modal{background:#fff;border-radius:18px 18px 0 0;padding:22px 18px;width:100%;max-width:480px;animation:slu .25s ease;max-height:80vh;overflow-y:auto}
+@keyframes slu{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-h{width:36px;height:4px;background:#e5e7eb;border-radius:100px;margin:0 auto 16px}
+.modal-title{font-size:.95rem;font-weight:900;margin-bottom:5px}
+.modal-sub{font-size:.78rem;color:var(--mu);font-weight:600;margin-bottom:14px}
+.modal-btns{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.mbtn{padding:11px 18px;border-radius:9px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:900;cursor:pointer;border:none;transition:all .2s}
+.mbtn-r{background:var(--red);color:#fff}
+.mbtn-w{background:#f3f4f6;color:var(--t2)}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:50;box-shadow:0 -3px 12px rgba(0,0,0,.06)}
+.bnav{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px 12px;gap:3px;color:var(--mu);font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:.03em;text-decoration:none;border:none;background:transparent;cursor:pointer;transition:color .15s;-webkit-tap-highlight-color:transparent}
+.bnav.active{color:var(--g)}
+.bn-icon{font-size:1.25rem;line-height:1}
 </style>
 </head>
 <body>
 
-<div class="loading" id="loadingOverlay">
-  <div class="loading-icon">📱</div>
-  <div class="spin"></div>
-  <div class="loading-text">Chargement du constructeur...</div>
+<!-- LOADING SCREEN -->
+<div id="LS">
+  <div class="ls-icon">📱</div>
+  <div class="spin" style="width:26px;height:26px"></div>
+  <div class="ls-msg" id="lsMsg">Chargement...</div>
+  <div class="ls-err" id="lsErr"></div>
 </div>
+
+<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- MODALS -->
-<div class="modal-o" id="publishModal">
+<!-- MODAL: Delete confirmation -->
+<div class="modal-o" id="delModal">
   <div class="modal">
-    <h3>🚀 Publier & Télécharger</h3>
-    <p>Ton app est prête ! Choisis comment la distribuer.</p>
-    <div class="qr-placeholder">📱</div>
-    <div style="font-size:.72rem;font-weight:700;color:var(--mu);text-align:center;margin-bottom:12px">Scanne pour accéder à l'app en ligne</div>
-    <div class="pub-share-link" id="shareLink">https://apkbuilding.app/app/...</div>
+    <div class="modal-h"></div>
+    <div class="modal-title">🗑 Supprimer l'application ?</div>
+    <div class="modal-sub">Cette action est irréversible. Toutes les données seront supprimées définitivement.</div>
     <div class="modal-btns">
-      <button class="mbtn mbtn-g" onclick="downloadApp()">📥 Télécharger APK</button>
-      <button class="mbtn mbtn-g" style="background:var(--blue)" onclick="copyShareLink()">🔗 Copier lien</button>
-      <button class="mbtn mbtn-w" onclick="closeModal('publishModal')">Fermer</button>
+      <button class="mbtn mbtn-r" id="delConfirmBtn">Supprimer définitivement</button>
+      <button class="mbtn mbtn-w" onclick="closeModal('delModal')">Annuler</button>
     </div>
   </div>
 </div>
 
-<div class="modal-o" id="pageModal">
-  <div class="modal">
-    <h3>➕ Nouvelle page</h3>
-    <p>Ajoute une nouvelle page à ton application.</p>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div><div style="font-size:.72rem;font-weight:700;color:var(--t2);margin-bottom:4px">Nom de la page</div><input class="prop-input" id="newPageName" placeholder="Ex: Accueil, Profil, Cours..."></div>
-      <div><div style="font-size:.72rem;font-weight:700;color:var(--t2);margin-bottom:6px">Template</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pageTemplates">
-        <div class="comp-item" onclick="selTemplate(this,'blank')" data-t="blank"><div class="comp-icon">⬜</div><div class="comp-name">Vide</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'login')" data-t="login"><div class="comp-icon">🔐</div><div class="comp-name">Connexion</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'feed')" data-t="feed"><div class="comp-icon">📋</div><div class="comp-name">Feed</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'course')" data-t="course"><div class="comp-icon">🎓</div><div class="comp-name">Cours</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'music')" data-t="music"><div class="comp-icon">🎵</div><div class="comp-name">Musique</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'shop')" data-t="shop"><div class="comp-icon">🛒</div><div class="comp-name">Shop</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'profile')" data-t="profile"><div class="comp-icon">👤</div><div class="comp-name">Profil</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'chat')" data-t="chat"><div class="comp-icon">💬</div><div class="comp-name">Chat</div></div>
-        <div class="comp-item" onclick="selTemplate(this,'dashboard')" data-t="dashboard"><div class="comp-icon">📊</div><div class="comp-name">Dashboard</div></div>
-      </div>
+<!-- ══════════ HOME VIEW ══════════ -->
+<div class="view active" id="homeView">
+  <div class="home-top">
+    <div class="home-nav">
+      <div class="home-logo"><div class="home-logo-i">📱</div>APK Building</div>
+      <a class="admin-link" id="adminLink" href="admin.html">⚡ Admin</a>
+    </div>
+    <div class="hero-card">
+      <div class="hero-greet" id="heroGreet">Bonjour 👋</div>
+      <div class="hero-name" id="heroName">Mon espace</div>
+      <div class="hero-stats">
+        <div class="hs"><div class="hs-n" id="statApps">0</div><div class="hs-l">Apps</div></div>
+        <div class="hs"><div class="hs-n" id="statReady">0</div><div class="hs-l">Prêtes</div></div>
+        <div class="hs"><div class="hs-n" id="statPlan">FREE</div><div class="hs-l">Plan</div></div>
       </div>
     </div>
-    <div class="modal-btns">
-      <button class="mbtn mbtn-g" onclick="addPage()">Créer la page</button>
-      <button class="mbtn mbtn-w" onclick="closeModal('pageModal')">Annuler</button>
+  </div>
+  <div class="home-body">
+    <div class="sec-hd">
+      <span>Mes Applications</span>
+      <button onclick="startNewApp()">+ Créer</button>
+    </div>
+    <div id="appsList">
+      <div class="empty-card">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">Aucune app créée</div>
+        <div class="empty-sub">Crée ta première application !</div>
+        <button class="btn btn-g btn-sm" onclick="startNewApp()">🚀 Créer une app</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="modal-o" id="logicModal">
-  <div class="modal">
-    <h3>⚡ Ajouter une logique</h3>
-    <p>Définis le comportement de ce composant.</p>
-    <div style="display:flex;flex-direction:column;gap:8px" id="logicOptions">
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('navigate')"><div class="logic-icon">🔗</div><span>Naviguer vers une page</span></div>
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('alert')"><div class="logic-icon">💬</div><span>Afficher un message</span></div>
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('submit')"><div class="logic-icon">📤</div><span>Soumettre un formulaire</span></div>
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('toggle')"><div class="logic-icon">🔄</div><span>Afficher/masquer un élément</span></div>
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('share')"><div class="logic-icon">📢</div><span>Partager l'application</span></div>
-      <div class="logic-item" style="cursor:pointer" onclick="addLogic('openUrl')"><div class="logic-icon">🌐</div><span>Ouvrir un lien externe</span></div>
-    </div>
-    <div class="modal-btns">
-      <button class="mbtn mbtn-w" onclick="closeModal('logicModal')">Annuler</button>
+<!-- ══════════ BUILDER VIEW ══════════ -->
+<div class="view" id="builderView">
+  <div class="bld-top">
+    <button class="bld-back" onclick="backHome()">←</button>
+    <input class="bld-name" id="bldName" placeholder="Nom de l'app..." oninput="triggerSave()">
+    <div class="save-ind" id="saveInd">✓ Sauvé</div>
+    <div class="bld-acts">
+      <button class="ba ba-o" onclick="previewApp()">👁</button>
+      <button class="ba ba-w" onclick="downloadApp()">📥 APK</button>
     </div>
   </div>
+
+  <div class="step-tabs" id="stepTabs">
+    <button class="st active" data-s="0" onclick="goStep(0)">① Identité</button>
+    <button class="st" data-s="1" onclick="goStep(1)">② Concept</button>
+    <button class="st" data-s="2" onclick="goStep(2)">③ Features</button>
+    <button class="st" data-s="3" onclick="goStep(3)">④ Design</button>
+    <button class="st" data-s="4" onclick="goStep(4)">⑤ Build APK</button>
+  </div>
+
+  <div class="bld-body">
+
+    <!-- PANEL 0: IDENTITÉ -->
+    <div class="panel active" id="p0">
+      <div class="ph">🪪 Identité</div>
+      <div class="ps">Nom, icône et positionnement de ton app.</div>
+
+      <div class="field">
+        <label>Icône & Nom <span class="req">*</span></label>
+        <div class="emoji-row">
+          <button class="emoji-btn" id="iconBtn" onclick="toggleEmoji()" type="button">🚀</button>
+          <input type="text" id="bName" placeholder="Ex: MonApp, ShopKing..." oninput="syncName();triggerSave()">
+        </div>
+        <div class="emoji-picker" id="emojiPicker"></div>
+        <div class="ferr" id="eName">Nom requis.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Catégorie <span class="req">*</span></label>
+          <select id="bCat" onchange="triggerSave()">
+            <option value="">Choisir...</option>
+            <option>Productivité</option><option>Lifestyle</option><option>Social</option>
+            <option>Santé & Sport</option><option>Finance</option><option>Éducation</option>
+            <option>E-commerce</option><option>Divertissement</option><option>Voyage</option>
+            <option>Business</option><option>Musique</option><option>Restauration</option><option>Autre</option>
+          </select>
+          <div class="ferr" id="eCat">Catégorie requise.</div>
+        </div>
+        <div class="field">
+          <label>Audience</label>
+          <input type="text" id="bAudience" placeholder="Ex: Étudiants..." oninput="triggerSave()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Slogan <span class="req">*</span></label>
+        <input type="text" id="bTagline" placeholder="Ex: L'app qui simplifie ta vie." oninput="triggerSave()">
+        <div class="ferr" id="eTagline">Slogan requis.</div>
+      </div>
+
+      <div class="field">
+        <label>Mots-clés (Entrée pour valider)</label>
+        <div class="tags-box" id="tagsBox" onclick="document.getElementById('tagIn').focus()">
+          <input class="tag-inp" id="tagIn" placeholder="Ajouter..." onkeydown="addTag(event)">
+        </div>
+      </div>
+
+      <div class="vmsg" id="vm0"></div>
+      <div class="step-acts"><div></div><button class="btn-next" onclick="nextStep()">Concept →</button></div>
+    </div>
+
+    <!-- PANEL 1: CONCEPT -->
+    <div class="panel" id="p1">
+      <div class="ph">💡 Concept</div>
+      <div class="ps">Décris ton app et sa valeur unique.</div>
+
+      <div class="field">
+        <label>Description complète <span class="req">*</span></label>
+        <textarea id="bDesc" placeholder="Décris ton application en détail..." oninput="triggerSave()"></textarea>
+        <div class="ferr" id="eDesc">Description requise.</div>
+      </div>
+      <div class="field">
+        <label>Problème résolu <span class="req">*</span></label>
+        <textarea id="bProblem" rows="3" placeholder="Quel problème concret ton app résout-elle ?" oninput="triggerSave()"></textarea>
+        <div class="ferr" id="eProb">Requis.</div>
+      </div>
+      <div class="field">
+        <label>Valeur unique (UVP)</label>
+        <textarea id="bUVP" rows="3" placeholder="Ce qui te différencie des concurrents..." oninput="triggerSave()"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Modèle économique</label>
+          <select id="bBiz" onchange="triggerSave()">
+            <option value="">Choisir...</option>
+            <option>Gratuit</option><option>Freemium</option><option>Abonnement</option>
+            <option>Achat unique</option><option>B2B SaaS</option><option>Marketplace</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Plateforme</label>
+          <select id="bPlat" onchange="triggerSave()">
+            <option value="">Choisir...</option>
+            <option>Android</option><option>iOS & Android</option>
+            <option>Web + Mobile</option><option>Tous</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="vmsg" id="vm1"></div>
+      <div class="step-acts">
+        <button class="btn-prev" onclick="prevStep()">← Retour</button>
+        <button class="btn-next" onclick="nextStep()">Features →</button>
+      </div>
+    </div>
+
+    <!-- PANEL 2: FEATURES -->
+    <div class="panel" id="p2">
+      <div class="ph">⚙️ Fonctionnalités</div>
+      <div class="ps">MVP = essentiel, V2/V3 = versions futures.</div>
+      <div class="feat-list" id="featList"></div>
+      <button class="add-feat" onclick="addFeat()">+ Ajouter une fonctionnalité</button>
+      <div class="vmsg" id="vm2"></div>
+      <div class="step-acts" style="margin-top:14px">
+        <button class="btn-prev" onclick="prevStep()">← Retour</button>
+        <button class="btn-next" onclick="nextStep()">Design →</button>
+      </div>
+    </div>
+
+    <!-- PANEL 3: DESIGN -->
+    <div class="panel" id="p3">
+      <div class="ph">🎨 Design</div>
+      <div class="ps">Identité visuelle de ton application.</div>
+
+      <div class="field">
+        <label>Couleur principale</label>
+        <div class="color-grid" id="colorGrid"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <input type="color" id="customColor" value="#16a34a" onchange="setColor(this.value,null)" style="width:28px;height:28px;border:none;border-radius:50%;cursor:pointer;padding:0;background:none">
+          <span style="font-size:.72rem;color:var(--mu);font-weight:700">Couleur personnalisée</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Palette <span class="req">*</span></label>
+        <div class="pal-list" id="palList"></div>
+        <div class="ferr" id="ePal">Sélectionne une palette.</div>
+      </div>
+
+      <div class="field">
+        <label>Style visuel</label>
+        <div class="style-grid" id="styleGrid"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Police</label>
+          <select id="bFont" onchange="triggerSave()">
+            <option>Nunito</option><option>Poppins</option><option>Raleway</option>
+            <option>Manrope</option><option>DM Sans</option><option>Josefin Sans</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ton de comm</label>
+          <select id="bTone" onchange="triggerSave()">
+            <option>Professionnel</option><option>Amical</option><option>Inspirant</option>
+            <option>Minimaliste</option><option>Ludique</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="vmsg" id="vm3"></div>
+      <div class="step-acts">
+        <button class="btn-prev" onclick="prevStep()">← Retour</button>
+        <button class="btn-next" onclick="nextStep()">Build APK →</button>
+      </div>
+    </div>
+
+    <!-- PANEL 4: BUILD -->
+    <div class="panel" id="p4">
+      <div class="ph">🚀 Build APK</div>
+      <div class="ps">Résumé complet + génère et télécharge ton app.</div>
+      <div class="sum-card" id="sumCard"></div>
+      <div class="sect-box">
+        <div class="sect-tit">📦 Stack technique</div>
+        <div id="stackDisplay"></div>
+      </div>
+      <div class="sect-box">
+        <div class="sect-tit">🗺 Roadmap</div>
+        <div class="roadmap" id="roadmap"></div>
+      </div>
+      <div class="build-card">
+        <div class="build-icon">📲</div>
+        <div class="build-title">Générer l'APK Android</div>
+        <div class="build-sub">Lance la compilation et télécharge ton app directement sur ton téléphone.</div>
+        <button class="btn btn-g" id="buildBtn" onclick="startBuild()">
+          <div class="spin" id="buildSpin" style="width:16px;height:16px;border-width:2px;display:none"></div>
+          <span id="buildTxt">⚡ Lancer le Build</span>
+        </button>
+        <div class="build-prog" id="buildProg"><div class="build-prog-bar" id="buildBar"></div></div>
+        <div class="build-status" id="buildStatus"></div>
+        <div class="build-logs" id="buildLogs"></div>
+        <button class="dl-btn" id="dlBtn" onclick="downloadApp()">📥 Télécharger l'APK</button>
+      </div>
+      <div class="step-acts">
+        <button class="btn-prev" onclick="prevStep()">← Retour</button>
+        <button class="save-exit" onclick="saveAndExit()">💾 Sauvegarder & Quitter</button>
+      </div>
+    </div>
+
+  </div><!-- /bld-body -->
 </div>
 
-<!-- ══════════════════════════════ SHELL ══════════════════════════════ -->
-<div class="shell" id="mainShell" style="display:none">
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="tb-logo"><div class="tb-logo-i">📱</div>APK Building</div>
-    <div class="tb-sep"></div>
-    <input class="tb-app-name" id="appNameInput" placeholder="Nom de l'app..." oninput="autoSave()">
-    <div class="tb-sep"></div>
-    <div class="tb-page-tabs" id="pageTabs"></div>
-    <button class="tb-add-page" onclick="openPageModal()">+ Page</button>
-    <div class="tb-sep"></div>
-    <div class="tb-actions">
-      <button class="tb-btn tb-btn-outline" onclick="previewApp()">👁 Aperçu</button>
-      <button class="tb-btn tb-btn-outline" onclick="openModal('publishModal')">⬆️ Publier</button>
-      <button class="tb-btn tb-btn-white" onclick="downloadApp()">📥 APK</button>
-    </div>
-  </div>
-
-  <!-- LEFT PANEL -->
-  <div class="left-panel" id="leftPanel">
-    <div class="search-box"><input class="search-input" placeholder="🔍 Rechercher un composant..." oninput="filterComps(this.value)"></div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Mise en page</div>
-      <div class="comp-grid" id="layoutComps">
-        <div class="comp-item" draggable="true" data-comp="header"><div class="comp-icon">🏠</div><div class="comp-name">En-tête</div></div>
-        <div class="comp-item" draggable="true" data-comp="hero"><div class="comp-icon">🌟</div><div class="comp-name">Hero</div></div>
-        <div class="comp-item" draggable="true" data-comp="bottomnav"><div class="comp-icon">🔘</div><div class="comp-name">Nav bas</div></div>
-        <div class="comp-item" draggable="true" data-comp="tabs"><div class="comp-icon">📑</div><div class="comp-name">Onglets</div></div>
-        <div class="comp-item" draggable="true" data-comp="card"><div class="comp-icon">🃏</div><div class="comp-name">Carte</div></div>
-        <div class="comp-item" draggable="true" data-comp="divider"><div class="comp-icon">➖</div><div class="comp-name">Séparation</div></div>
-        <div class="comp-item" draggable="true" data-comp="spacer"><div class="comp-icon">⬜</div><div class="comp-name">Espace</div></div>
-        <div class="comp-item" draggable="true" data-comp="statrow"><div class="comp-icon">📊</div><div class="comp-name">Statistiques</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Textes & Médias</div>
-      <div class="comp-grid">
-        <div class="comp-item" draggable="true" data-comp="text"><div class="comp-icon">📝</div><div class="comp-name">Texte</div></div>
-        <div class="comp-item" draggable="true" data-comp="image"><div class="comp-icon">🖼️</div><div class="comp-name">Image</div></div>
-        <div class="comp-item" draggable="true" data-comp="video"><div class="comp-icon">🎬</div><div class="comp-name">Vidéo</div></div>
-        <div class="comp-item" draggable="true" data-comp="audio"><div class="comp-icon">🎵</div><div class="comp-name">Audio</div></div>
-        <div class="comp-item" draggable="true" data-comp="badge"><div class="comp-icon">🏷️</div><div class="comp-name">Badges</div></div>
-        <div class="comp-item" draggable="true" data-comp="notif"><div class="comp-icon">🔔</div><div class="comp-name">Notification</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Formulaires</div>
-      <div class="comp-grid">
-        <div class="comp-item" draggable="true" data-comp="input"><div class="comp-icon">✏️</div><div class="comp-name">Champ texte</div></div>
-        <div class="comp-item" draggable="true" data-comp="password"><div class="comp-icon">🔒</div><div class="comp-name">Mot de passe</div></div>
-        <div class="comp-item" draggable="true" data-comp="select"><div class="comp-icon">📋</div><div class="comp-name">Sélection</div></div>
-        <div class="comp-item" draggable="true" data-comp="checkbox"><div class="comp-icon">☑️</div><div class="comp-name">Case à cocher</div></div>
-        <div class="comp-item" draggable="true" data-comp="switch"><div class="comp-icon">🔀</div><div class="comp-name">Switch</div></div>
-        <div class="comp-item" draggable="true" data-comp="formwrap"><div class="comp-icon">📄</div><div class="comp-name">Formulaire</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Actions</div>
-      <div class="comp-grid">
-        <div class="comp-item" draggable="true" data-comp="btn-primary"><div class="comp-icon">🟢</div><div class="comp-name">Bouton</div></div>
-        <div class="comp-item" draggable="true" data-comp="btn-secondary"><div class="comp-icon">⬜</div><div class="comp-name">Btn sec.</div></div>
-        <div class="comp-item" draggable="true" data-comp="btn-outline"><div class="comp-icon">🔲</div><div class="comp-name">Btn bord.</div></div>
-        <div class="comp-item" draggable="true" data-comp="btn-danger"><div class="comp-icon">🔴</div><div class="comp-name">Btn danger</div></div>
-        <div class="comp-item" draggable="true" data-comp="sociallogin"><div class="comp-icon">🌐</div><div class="comp-name">Social login</div></div>
-        <div class="comp-item" draggable="true" data-comp="sharebar"><div class="comp-icon">📢</div><div class="comp-name">Partage</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Listes & Contenus</div>
-      <div class="comp-grid">
-        <div class="comp-item" draggable="true" data-comp="list"><div class="comp-icon">📋</div><div class="comp-name">Liste</div></div>
-        <div class="comp-item" draggable="true" data-comp="progress"><div class="comp-icon">📈</div><div class="comp-name">Progression</div></div>
-        <div class="comp-item" draggable="true" data-comp="rating"><div class="comp-icon">⭐</div><div class="comp-name">Notation</div></div>
-        <div class="comp-item" draggable="true" data-comp="map"><div class="comp-icon">🗺️</div><div class="comp-name">Carte</div></div>
-        <div class="comp-item" draggable="true" data-comp="countdown"><div class="comp-icon">⏱️</div><div class="comp-name">Compte à rebours</div></div>
-        <div class="comp-item" draggable="true" data-comp="pricingcard"><div class="comp-icon">💳</div><div class="comp-name">Prix</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Spécialisés</div>
-      <div class="comp-grid">
-        <div class="comp-item" draggable="true" data-comp="coursecard"><div class="comp-icon">🎓</div><div class="comp-name">Carte cours</div></div>
-        <div class="comp-item" draggable="true" data-comp="musicplayer"><div class="comp-icon">🎶</div><div class="comp-name">Lecteur musik</div></div>
-        <div class="comp-item" draggable="true" data-comp="chatbubble"><div class="comp-icon">💬</div><div class="comp-name">Bulle chat</div></div>
-        <div class="comp-item" draggable="true" data-comp="chatbubble-sent"><div class="comp-icon">💭</div><div class="comp-name">Chat envoyé</div></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-section-title">Pages</div>
-      <div class="pages-list" id="pagesList"></div>
-    </div>
-  </div>
-
-  <!-- CANVAS -->
-  <div class="canvas-wrap" id="canvasWrap"
-    ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
-    <div class="canvas-phone" id="canvasPhone" style="--app-primary:#16a34a">
-      <div class="canvas-phone-bar">
-        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-        <div class="addr"></div>
-      </div>
-      <div class="canvas-body drop-zone empty" id="canvasBody">
-        <div class="drop-zone-hint">
-          <div style="font-size:2rem;margin-bottom:8px">🎨</div>
-          <div>Glisse des composants ici</div>
-          <div style="font-size:.72rem;margin-top:4px;color:#9ca3af">ou clique sur un composant à gauche</div>
-        </div>
-      </div>
-    </div>
-    <div class="canvas-controls">
-      <div class="canvas-ctrl-btn" onclick="zoomCanvas(1)" title="Zoom +">+</div>
-      <div class="canvas-ctrl-btn" onclick="zoomCanvas(-1)" title="Zoom -">−</div>
-      <div class="canvas-ctrl-btn" onclick="zoomCanvas(0)" title="Reset">⊙</div>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL -->
-  <div class="right-panel" id="rightPanel">
-    <div id="rpNoSel" class="no-selection">
-      <div class="no-sel-icon">👆</div>
-      <div class="no-sel-text">Sélectionne un composant</div>
-      <div class="no-sel-sub">ou configure ton app ci-dessous</div>
-    </div>
-    <div id="rpProps" style="display:none">
-      <div class="rp-header" id="rpTitle">Propriétés</div>
-      <div class="rp-tabs">
-        <div class="rp-tab active" onclick="switchRpTab('props',this)">Propriétés</div>
-        <div class="rp-tab" onclick="switchRpTab('style',this)">Style</div>
-        <div class="rp-tab" onclick="switchRpTab('logic',this)">Logique</div>
-      </div>
-      <div class="rp-body" id="rpBody"></div>
-    </div>
-    <!-- App settings always visible at bottom -->
-    <div class="app-settings" id="appSettings">
-      <div class="as-section">
-        <div class="as-title">🎨 Couleur principale</div>
-        <div class="color-picker-row" id="colorPicker">
-          <div class="color-opt sel" style="background:#16a34a" data-c="#16a34a" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#0ea5e9" data-c="#0ea5e9" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#8b5cf6" data-c="#8b5cf6" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#ef4444" data-c="#ef4444" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#f59e0b" data-c="#f59e0b" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#ec4899" data-c="#ec4899" onclick="setAppColor(this)"></div>
-          <div class="color-opt" style="background:#1f2937" data-c="#1f2937" onclick="setAppColor(this)"></div>
-          <input type="color" id="customColor" onchange="setAppColorHex(this.value)" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--bd);cursor:pointer;padding:0" title="Couleur personnalisée">
-        </div>
-      </div>
-      <div class="as-section">
-        <div class="as-title">📱 Type d'application</div>
-        <select class="prop-input prop-select" id="appType" onchange="autoSave()">
-          <option value="general">Général</option>
-          <option value="ecommerce">E-commerce / Shop</option>
-          <option value="education">Cours en ligne / Éducation</option>
-          <option value="music">Musique / Streaming</option>
-          <option value="social">Réseau social / Chat</option>
-          <option value="fitness">Fitness / Santé</option>
-          <option value="finance">Finance / Business</option>
-          <option value="news">Actualités / Blog</option>
-          <option value="food">Restauration / Food</option>
-          <option value="travel">Voyage / Transport</option>
-        </select>
-      </div>
-      <div class="as-section">
-        <div class="as-title">🔑 Fonctions avancées</div>
-        <div class="logic-list" id="appLogicList">
-          <div class="logic-item"><div class="logic-icon">🔐</div><span style="flex:1">Authentification</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
-          <div class="logic-item"><div class="logic-icon">💾</div><span style="flex:1">Base de données</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-          <div class="logic-item"><div class="logic-icon">🔔</div><span style="flex:1">Notifications push</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-          <div class="logic-item"><div class="logic-icon">📍</div><span style="flex:1">Géolocalisation</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-          <div class="logic-item"><div class="logic-icon">📷</div><span style="flex:1">Caméra & fichiers</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-          <div class="logic-item"><div class="logic-icon">💳</div><span style="flex:1">Paiements</span><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /shell -->
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="bnav active" id="nav-home" onclick="switchHome()"><div class="bn-icon">🏠</div>Accueil</button>
+  <button class="bnav" onclick="startNewApp()"><div class="bn-icon">➕</div>Créer</button>
+  <a class="bnav" href="profile.html"><div class="bn-icon">👤</div>Profil</a>
+  <a class="bnav" href="devis.html"><div class="bn-icon">💼</div>Devis</a>
+</div>
 
 <script>
-// ════════════════════════════════════════════
-// SUPABASE
-// ════════════════════════════════════════════
-const {createClient}=supabase;
-const sb=createClient('https://beppcitwncihpqhminmd.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcHBjaXR3bmNpaHBxaG1pbm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzY2NTgsImV4cCI6MjA5MDk1MjY1OH0.nQ4VrAFekWd8kFy1oHBoU4dKaNRL61WZ6vSLFak7ei0');
+// ═══════════════════════════════════════════════════════
+// SUPABASE — init unique
+// ═══════════════════════════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(
+  'https://beppcitwncihpqhminmd.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlcHBjaXR3bmNpaHBxaG1pbm1kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNzY2NTgsImV4cCI6MjA5MDk1MjY1OH0.nQ4VrAFekWd8kFy1oHBoU4dKaNRL61WZ6vSLFak7ei0'
+);
 
-// ════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 // STATE
-// ════════════════════════════════════════════
-let currentUser=null;
-let appId=null;
-let appData={name:'Mon App',color:'#16a34a',type:'general',pages:[],features:{}};
-let pages=[];// [{id,name,components:[]}]
-let currentPageIdx=0;
-let selectedCompId=null;
-let dragComp=null;
-let canvasZoom=1;
-let rpTab='props';
-let selectedTemplate='blank';
-let saveTimer=null;
-const urlParams=new URLSearchParams(window.location.search);
+// ═══════════════════════════════════════════════════════
+let USER = null, PROFILE = null;
+let APP_ID = null, STEP = 0;
+let TAGS = [], FEATS = [], COLOR = '#16a34a', PAL = null, STY = null;
+let ALL_APPS = [];
+let saveTimer = null, appToDelete = null;
 
-// ════════════════════════════════════════════
-// COMPONENT DEFINITIONS
-// ════════════════════════════════════════════
-const COMP_DEFS={
-  'header':{label:'En-tête',icon:'🏠',defaults:{title:'Mon Application',subtitle:'Bienvenue',bgColor:''}},
-  'hero':{label:'Section Hero',icon:'🌟',defaults:{title:'Titre principal',subtitle:'Description de votre application',imageUrl:''}},
-  'text':{label:'Texte',icon:'📝',defaults:{heading:'',content:'Votre texte ici. Double-cliquez pour modifier.',align:'left'}},
-  'image':{label:'Image',icon:'🖼️',defaults:{src:'',alt:'Image',aspectRatio:'16/9'}},
-  'video':{label:'Vidéo',icon:'🎬',defaults:{title:'Titre de la vidéo',url:'',thumbnail:''}},
-  'audio':{label:'Audio',icon:'🎵',defaults:{title:'Titre de la piste',artist:'Artiste',duration:'3:45'}},
-  'btn-primary':{label:'Bouton principal',icon:'🟢',defaults:{text:'Commencer',action:'',actionValue:''}},
-  'btn-secondary':{label:'Bouton secondaire',icon:'⬜',defaults:{text:'En savoir plus',action:'',actionValue:''}},
-  'btn-outline':{label:'Bouton bordure',icon:'🔲',defaults:{text:'Voir plus',action:'',actionValue:''}},
-  'btn-danger':{label:'Bouton danger',icon:'🔴',defaults:{text:'Supprimer',action:'',actionValue:''}},
-  'input':{label:'Champ texte',icon:'✏️',defaults:{label:'Email',placeholder:'exemple@email.com',type:'text',required:false}},
-  'password':{label:'Mot de passe',icon:'🔒',defaults:{label:'Mot de passe',placeholder:'••••••••'}},
-  'select':{label:'Liste déroulante',icon:'📋',defaults:{label:'Sélectionner',options:'Option 1\nOption 2\nOption 3'}},
-  'checkbox':{label:'Case à cocher',icon:'☑️',defaults:{label:'J\'accepte les conditions d\'utilisation',checked:false}},
-  'switch':{label:'Switch',icon:'🔀',defaults:{label:'Activer les notifications',on:false}},
-  'formwrap':{label:'Formulaire',icon:'📄',defaults:{title:'Formulaire de contact',submitText:'Envoyer'}},
-  'card':{label:'Carte',icon:'🃏',defaults:{title:'Titre de la carte',content:'Contenu de la carte. Ajoutez une description ici.'}},
-  'list':{label:'Liste',icon:'📋',defaults:{items:'Élément 1|Description 1\nÉlément 2|Description 2\nÉlément 3|Description 3'}},
-  'badge':{label:'Badges',icon:'🏷️',defaults:{items:'Nouveau\nPopulaire\nGratuit'}},
-  'tabs':{label:'Onglets',icon:'📑',defaults:{tabs:'Accueil\nProfil\nParamètres',active:0}},
-  'bottomnav':{label:'Navigation bas',icon:'🔘',defaults:{items:'🏠 Accueil\n🔍 Recherche\n❤️ Favoris\n👤 Profil',active:0}},
-  'divider':{label:'Séparateur',icon:'➖',defaults:{}},
-  'spacer':{label:'Espace',icon:'⬜',defaults:{height:16}},
-  'progress':{label:'Barre de progression',icon:'📈',defaults:{label:'Progression',value:65,color:''}},
-  'rating':{label:'Notation',icon:'⭐',defaults:{value:4,max:5,label:'(128 avis)'}},
-  'map':{label:'Carte',icon:'🗺️',defaults:{address:'Paris, France',zoom:14}},
-  'countdown':{label:'Compte à rebours',icon:'⏱️',defaults:{hours:12,minutes:30,seconds:0,label:'Offre expire dans'}},
-  'pricingcard':{label:'Carte prix',icon:'💳',defaults:{name:'Plan Pro',price:'9,99€/mois',features:'✓ Accès illimité\n✓ Support prioritaire\n✓ Mises à jour gratuites'}},
-  'sociallogin':{label:'Connexion sociale',icon:'🌐',defaults:{google:true,facebook:true,whatsapp:false}},
-  'sharebar':{label:'Barre de partage',icon:'📢',defaults:{platforms:'WhatsApp\nTelegram\nFacebook\nCopier'}},
-  'notif':{label:'Notification',icon:'🔔',defaults:{title:'Nouvelle notification',message:'Vous avez reçu un nouveau message'}},
-  'statrow':{label:'Statistiques',icon:'📊',defaults:{stats:'1.2K|Utilisateurs\n4.8|Note\n98%|Satisfaction'}},
-  'coursecard':{label:'Carte cours',icon:'🎓',defaults:{emoji:'📚',title:'Introduction au Design',instructor:'John Doe',duration:'4h 30min',progress:45}},
-  'musicplayer':{label:'Lecteur musique',icon:'🎶',defaults:{emoji:'🎵',title:'Nom de la chanson',artist:'Artiste',duration:'3:42'}},
-  'chatbubble':{label:'Bulle reçue',icon:'💬',defaults:{message:'Bonjour ! Comment puis-je vous aider ?',time:'14:32',type:'recv'}},
-  'chatbubble-sent':{label:'Bulle envoyée',icon:'💭',defaults:{message:'Merci pour votre réponse !',time:'14:33',type:'sent'}},
-  'video':{label:'Vidéo',icon:'🎬',defaults:{title:'Titre de la vidéo',url:''}},
-};
+const EMOJIS = ['🚀','⚡','🌟','💎','🔥','🎯','🧠','🎨','🌿','💡','🛡️','🎵','📚','🏋️','🌍','🤝','💬','📱','🔮','🌊','🦋','🏆','⚙️','🎮','🛒','💰','🎓','🏠','✈️','📊','🔬','🌈','🤖','🎸','🍀','📷','🍔','🎪','🏥','🐉'];
+const PALETTES = [
+  {name:'Verdant', desc:'Vert & blanc', colors:['#16a34a','#22c55e','#f0fdf4','#1f2937']},
+  {name:'Ocean',   desc:'Bleu & cyan',  colors:['#0ea5e9','#22d3ee','#f0f9ff','#0f172a']},
+  {name:'Violet',  desc:'Violet & rose',colors:['#8b5cf6','#ec4899','#fdf4ff','#1e1b4b']},
+  {name:'Flame',   desc:'Orange feu',   colors:['#f97316','#fbbf24','#fff7ed','#1c1917']},
+  {name:'Ruby',    desc:'Rouge élégant',colors:['#ef4444','#f87171','#fff1f2','#1f2937']},
+  {name:'Mono',    desc:'Noir & blanc', colors:['#111827','#6b7280','#ffffff','#f9fafb']},
+];
+const STYLES = [
+  {id:'minimal', icon:'◻', name:'Minimal', desc:'Épuré, aéré'},
+  {id:'bold',    icon:'◼', name:'Bold',    desc:'Fort, impactant'},
+  {id:'playful', icon:'◈', name:'Playful', desc:'Coloré, fun'},
+  {id:'corp',    icon:'▣', name:'Corporate',desc:'Pro, sérieux'},
+];
+const FEAT_EMOJIS = ['⭐','🔔','🔐','📊','💬','🔍','📷','📍','🎵','🛒','💳','👤','📅','⚙️','🔗','📤','🏆','❤️','🌐','📩','🎯','📈','🔄','💡','🧭'];
+const BUILD_LOG = [
+  '⚙️  Initialisation du projet Expo...',
+  '📦  Installation des dépendances npm...',
+  '🔑  Authentification Expo EAS...',
+  '🏗️  Compilation du bundle JavaScript...',
+  '🔧  Génération projet Android natif...',
+  '📝  Configuration du keystore...',
+  '🏗️  Compilation Gradle (APK release)...',
+  '🔒  Signature APK...',
+  '✅  Build terminé avec succès !',
+];
 
-// ════════════════════════════════════════════
-// TEMPLATES
-// ════════════════════════════════════════════
-const TEMPLATES={
-  blank:[],
-  login:[
-    {type:'header',props:{title:'Bienvenue',subtitle:'Connectez-vous pour continuer'}},
-    {type:'spacer',props:{height:24}},
-    {type:'input',props:{label:'Email',placeholder:'votre@email.com'}},
-    {type:'password',props:{label:'Mot de passe',placeholder:'••••••••'}},
-    {type:'btn-primary',props:{text:'Se connecter',action:'navigate'}},
-    {type:'divider',props:{}},
-    {type:'sociallogin',props:{google:true,facebook:true,whatsapp:false}},
-    {type:'text',props:{content:'Pas encore de compte ? Inscrivez-vous',align:'center'}},
-  ],
-  feed:[
-    {type:'header',props:{title:'Actualités',subtitle:''}},
-    {type:'tabs',props:{tabs:'Tous\nTendances\nSuivis',active:0}},
-    {type:'card',props:{title:'Titre de l\'article',content:'Résumé de l\'article. Cliquez pour lire la suite...'}},
-    {type:'card',props:{title:'Deuxième article',content:'Un autre contenu intéressant à découvrir.'}},
-    {type:'list',props:{items:'Article 3|Il y a 2h\nArticle 4|Il y a 4h'}},
-    {type:'bottomnav',props:{items:'🏠 Accueil\n🔍 Recherche\n🔔 Notifs\n👤 Profil',active:0}},
-  ],
-  course:[
-    {type:'header',props:{title:'Mes Cours',subtitle:''}},
-    {type:'statrow',props:{stats:'12|Cours\n8|Terminés\n94%|Score'}},
-    {type:'coursecard',props:{emoji:'🎨',title:'Design UX/UI Avancé',instructor:'Marie Martin',duration:'6h 15min',progress:65}},
-    {type:'coursecard',props:{emoji:'💻',title:'React Native Complet',instructor:'Jean Dupont',duration:'12h',progress:30}},
-    {type:'progress',props:{label:'Objectif hebdomadaire',value:72}},
-    {type:'bottomnav',props:{items:'🏠 Accueil\n📚 Cours\n🏆 Progrès\n👤 Profil',active:1}},
-  ],
-  music:[
-    {type:'header',props:{title:'Ma Musique',subtitle:''}},
-    {type:'musicplayer',props:{emoji:'🎵',title:'Titre de la chanson',artist:'Nom de l\'artiste'}},
-    {type:'tabs',props:{tabs:'En cours\nPlaylist\nArtistes',active:0}},
-    {type:'list',props:{items:'Chanson 1|Artiste A · 3:24\nChanson 2|Artiste B · 4:12\nChanson 3|Artiste C · 2:58'}},
-    {type:'bottomnav',props:{items:'🏠 Accueil\n🔍 Découvrir\n🎵 Biblio\n👤 Profil',active:2}},
-  ],
-  shop:[
-    {type:'header',props:{title:'Boutique',subtitle:''}},
-    {type:'input',props:{label:'',placeholder:'🔍 Rechercher un produit...'}},
-    {type:'badge',props:{items:'Nouveautés\nPromo\nMeilleures ventes'}},
-    {type:'card',props:{title:'Produit Premium',content:'Description du produit. Qualité exceptionnelle garantie.'}},
-    {type:'pricingcard',props:{name:'Offre Spéciale',price:'29,99€',features:'✓ Livraison offerte\n✓ Retour 30 jours\n✓ Garantie 2 ans'}},
-    {type:'btn-primary',props:{text:'Ajouter au panier',action:'alert',actionValue:'Ajouté au panier !'}},
-    {type:'bottomnav',props:{items:'🏠 Accueil\n🔍 Recherche\n❤️ Favoris\n🛒 Panier',active:0}},
-  ],
-  profile:[
-    {type:'hero',props:{title:'Jean Dupont',subtitle:'Membre depuis 2024',imageUrl:''}},
-    {type:'statrow',props:{stats:'142|Abonnés\n89|Abonnements\n24|Posts'}},
-    {type:'list',props:{items:'Mes publications|20 articles\nMes favoris|14 éléments\nMes paramètres|Compte & sécurité'}},
-    {type:'btn-outline',props:{text:'Modifier le profil',action:''}},
-    {type:'btn-danger',props:{text:'Se déconnecter',action:''}},
-    {type:'bottomnav',props:{items:'🏠 Accueil\n🔍 Explorer\n❤️ Favoris\n👤 Profil',active:3}},
-  ],
-  chat:[
-    {type:'header',props:{title:'Messages',subtitle:'En ligne'}},
-    {type:'chatbubble',props:{message:'Bonjour ! Comment puis-je vous aider aujourd\'hui ?',time:'14:30',type:'recv'}},
-    {type:'chatbubble-sent',props:{message:'Bonjour ! Je voudrais en savoir plus.',time:'14:31',type:'sent'}},
-    {type:'chatbubble',props:{message:'Bien sûr, je suis là pour vous aider !',time:'14:32',type:'recv'}},
-    {type:'chatbubble-sent',props:{message:'Merci beaucoup !',time:'14:33',type:'sent'}},
-    {type:'input',props:{label:'',placeholder:'Écrire un message...'}},
-    {type:'btn-primary',props:{text:'Envoyer',action:''}},
-  ],
-  dashboard:[
-    {type:'header',props:{title:'Dashboard',subtitle:'Vue d\'ensemble'}},
-    {type:'statrow',props:{stats:'2.4K|Vues\n186|Ventes\n94%|Score'}},
-    {type:'progress',props:{label:'Objectif mensuel',value:78}},
-    {type:'notif',props:{title:'Nouvelle commande',message:'Commande #1234 reçue il y a 5 minutes'}},
-    {type:'card',props:{title:'📈 Rapport hebdomadaire',content:'Les performances sont en hausse de 12% cette semaine.'}},
-    {type:'list',props:{items:'Ventes|+24% cette semaine\nClients|186 nouveaux\nRevenu|€4,280'}},
-    {type:'bottomnav',props:{items:'📊 Dashboard\n📦 Produits\n💰 Ventes\n⚙️ Paramètres',active:0}},
-  ],
-};
+// ═══════════════════════════════════════════════════════
+// INIT — avec try/catch pour éviter loading bloqué
+// ═══════════════════════════════════════════════════════
+async function init() {
+  // Build UI elements first (no async)
+  buildEmojiGrid();
+  buildColorGrid();
+  buildPalList(null);
+  buildStyleGrid(null);
 
-// ════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════
-async function init(){
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){window.location.href='apk-building.html';return;}
-  currentUser=session.user;
-  appId=urlParams.get('app');
-  if(appId){await loadApp();}
-  else{initDefaultApp();}
-  document.getElementById('loadingOverlay').style.display='none';
-  document.getElementById('mainShell').style.display='grid';
-  setupDragDrop();
-}
+  try {
+    setLoadMsg('Vérification session...');
+    const { data: { session }, error: sErr } = await sb.auth.getSession();
+    if (sErr) throw new Error('Session: ' + sErr.message);
+    if (!session) { window.location.href = 'auth.html'; return; }
+    USER = session.user;
 
-function initDefaultApp(){
-  appData={name:'Mon App',color:'#16a34a',type:'general'};
-  pages=[{id:uid(),name:'Accueil',components:[]}];
-  currentPageIdx=0;
-  renderAll();
-}
+    setLoadMsg('Chargement du profil...');
+    const { data: p, error: pErr } = await sb.from('profiles').select('*').eq('id', USER.id).single();
+    if (pErr && pErr.code !== 'PGRST116') throw new Error('Profil: ' + pErr.message);
+    PROFILE = p;
 
-async function loadApp(){
-  const{data:app}=await sb.from('apps').select('*').eq('id',appId).single();
-  if(!app){initDefaultApp();return;}
-  appData={name:app.name||'Mon App',color:app.palette||'#16a34a',type:app.type||'general'};
-  try{pages=JSON.parse(app.builder_data||'null')||[{id:uid(),name:'Accueil',components:[]}];}
-  catch{pages=[{id:uid(),name:'Accueil',components:[]}];}
-  document.getElementById('appNameInput').value=appData.name;
-  setCanvasColor(appData.color);
-  renderAll();
-}
-
-async function autoSave(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    appData.name=document.getElementById('appNameInput').value||'Mon App';
-    if(appId){
-      await sb.from('apps').update({
-        name:appData.name,
-        builder_data:JSON.stringify(pages),
-        palette:appData.color,
-        updated_at:new Date().toISOString()
-      }).eq('id',appId);
+    if (PROFILE?.is_admin) {
+      document.getElementById('adminLink').style.display = 'block';
     }
-    toast('✓ Sauvegardé','ok');
-  },1200);
-}
 
-// ════════════════════════════════════════════
-// RENDER
-// ════════════════════════════════════════════
-function renderAll(){
-  renderPageTabs();
-  renderPagesList();
-  renderCanvas();
-}
+    setLoadMsg('Chargement des apps...');
+    await loadDashboard();
 
-function renderPageTabs(){
-  const tabs=document.getElementById('pageTabs');
-  tabs.innerHTML=pages.map((p,i)=>`
-    <div class="tb-page-tab ${i===currentPageIdx?'active':''}" onclick="switchPage(${i})">${p.name}</div>
-  `).join('');
-}
+    // Check URL param for direct app open
+    const appId = new URLSearchParams(window.location.search).get('app');
+    if (appId) await openApp(appId);
 
-function renderPagesList(){
-  const list=document.getElementById('pagesList');
-  list.innerHTML=pages.map((p,i)=>`
-    <div class="page-item ${i===currentPageIdx?'active':''}" onclick="switchPage(${i})">
-      <span class="page-icon">📄</span>
-      <span>${p.name}</span>
-      ${pages.length>1?`<span class="page-del" onclick="deletePage(${i},event)">🗑</span>`:''}
-    </div>
-  `).join('');
-}
-
-function renderCanvas(){
-  const body=document.getElementById('canvasBody');
-  const page=pages[currentPageIdx];
-  if(!page||!page.components.length){
-    body.innerHTML='<div class="drop-zone-hint"><div style="font-size:2rem;margin-bottom:8px">🎨</div><div>Glisse des composants ici</div><div style="font-size:.72rem;margin-top:4px;color:#9ca3af">ou clique sur un composant à gauche</div></div>';
-    body.classList.add('empty');
+  } catch (err) {
+    console.error('Init error:', err);
+    showLoadError(err.message);
     return;
   }
-  body.classList.remove('empty');
-  body.innerHTML=page.components.map((c,i)=>renderComp(c,i)).join('');
-  // Re-bind selected
-  if(selectedCompId){
-    const el=document.getElementById(selectedCompId);
-    if(el) el.classList.add('selected');
+
+  // Hide loading screen
+  document.getElementById('LS').style.display = 'none';
+}
+
+function setLoadMsg(msg) {
+  document.getElementById('lsMsg').textContent = msg;
+}
+function showLoadError(msg) {
+  document.getElementById('lsMsg').textContent = 'Erreur de chargement';
+  const errEl = document.getElementById('lsErr');
+  errEl.textContent = msg + '\n\nVérifie ta connexion et que le SQL a bien été exécuté dans Supabase.';
+  errEl.style.display = 'block';
+  // Add retry button
+  const btn = document.createElement('button');
+  btn.textContent = '🔄 Réessayer';
+  btn.style.cssText = 'margin-top:14px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-family:Nunito,sans-serif;font-size:.88rem;font-weight:800;cursor:pointer';
+  btn.onclick = () => location.reload();
+  document.getElementById('LS').appendChild(btn);
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+async function loadDashboard() {
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+  document.getElementById('heroGreet').textContent = greet + ' 👋';
+  document.getElementById('heroName').textContent = PROFILE?.full_name || 'Mon espace';
+  document.getElementById('statPlan').textContent = (PROFILE?.plan || 'free').toUpperCase();
+
+  const { data: apps, error } = await sb.from('apps')
+    .select('id,name,icon,category,app_color,status,last_step')
+    .eq('user_id', USER.id)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw new Error('Apps: ' + error.message);
+  ALL_APPS = apps || [];
+
+  document.getElementById('statApps').textContent = ALL_APPS.length;
+  document.getElementById('statReady').textContent = ALL_APPS.filter(a => a.status === 'ready').length;
+  renderAppsList();
+}
+
+function renderAppsList() {
+  const el = document.getElementById('appsList');
+  if (!ALL_APPS.length) {
+    el.innerHTML = `<div class="empty-card">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">Aucune app créée</div>
+      <div class="empty-sub">Lance-toi et crée ta première application !</div>
+      <button class="btn btn-g btn-sm" onclick="startNewApp()">🚀 Créer une app</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = ALL_APPS.map(a => {
+    const prog = calcProg(a);
+    const col = a.app_color || '#16a34a';
+    return `<div class="app-row">
+      <div class="app-icon" style="background:linear-gradient(135deg,${col},${col}99)">${a.icon||'📱'}</div>
+      <div class="app-info" onclick="openApp('${a.id}')">
+        <div class="app-name">${a.name||'Sans nom'}</div>
+        <div class="app-cat">${a.category||'—'} &nbsp;·&nbsp; <span class="badge ${a.status==='ready'?'bg-g':'bg-gray'}">${a.status||'draft'}</span></div>
+        <div class="app-prog"><div class="app-prog-fill" style="width:${prog}%"></div></div>
+      </div>
+      <div class="app-btns">
+        <button class="ab ab-edit" onclick="openApp('${a.id}')">✏️</button>
+        <button class="ab ab-del" onclick="confirmDel('${a.id}',event)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function calcProg(a) {
+  let s = 0;
+  if (a.name) s += 15;
+  if (a.category) s += 10;
+  if ((a.last_step || 0) >= 1) s += 15;
+  if ((a.last_step || 0) >= 2) s += 20;
+  if ((a.last_step || 0) >= 3) s += 15;
+  if (a.status === 'ready') s += 25;
+  return Math.min(100, s);
+}
+
+// ═══════════════════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════════════════
+function switchHome() {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('homeView').classList.add('active');
+  document.getElementById('nav-home').classList.add('active');
+  loadDashboard();
+}
+
+function backHome() { saveApp(); switchHome(); }
+
+// ═══════════════════════════════════════════════════════
+// APP CRUD
+// ═══════════════════════════════════════════════════════
+async function startNewApp() {
+  try {
+    const { data, error } = await sb.from('apps').insert({
+      user_id: USER.id, name: '', icon: '🚀',
+      status: 'draft', app_color: '#16a34a', last_step: 0
+    }).select('id').single();
+    if (error) throw error;
+    APP_ID = data.id;
+    resetForm();
+    goStep(0);
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('builderView').classList.add('active');
+  } catch (err) {
+    toast('Erreur création: ' + err.message, 'err');
   }
 }
 
-function renderComp(c,idx){
-  const html=buildCompHTML(c);
-  return `<div class="r-comp" id="${c.id}" onclick="selectComp('${c.id}',event)" data-idx="${idx}">
-    <div class="r-comp-actions">
-      ${idx>0?`<button class="r-ca-btn r-ca-up" onclick="moveComp('${c.id}',-1,event)">↑</button>`:''}
-      ${idx<pages[currentPageIdx].components.length-1?`<button class="r-ca-btn r-ca-down" onclick="moveComp('${c.id}',1,event)">↓</button>`:''}
-      <button class="r-ca-btn r-ca-dup" onclick="dupComp('${c.id}',event)">⧉</button>
-      <button class="r-ca-btn r-ca-del" onclick="delComp('${c.id}',event)">✕</button>
-    </div>
-    ${html}
-  </div>`;
-}
-
-function buildCompHTML(c){
-  const p=c.props||{};
-  const primary=appData.color||'#16a34a';
-  switch(c.type){
-    case 'header': return `<div class="rc-header" style="background:${p.bgColor||primary}"><h1>${p.title||'Titre'}</h1>${p.subtitle?`<p>${p.subtitle}</p>`:''}</div>`;
-    case 'hero': return `<div class="rc-hero">${p.imageUrl?`<img src="${p.imageUrl}" style="width:80px;height:80px;border-radius:16px;margin-bottom:12px;object-fit:cover" onerror="this.style.display='none'">`:'<div style="font-size:3rem;margin-bottom:10px">🌟</div>'}<h2>${p.title||'Titre'}</h2><p>${p.subtitle||'Description'}</p></div>`;
-    case 'text': return `<div class="rc-text" style="text-align:${p.align||'left'}">${p.heading?`<h3>${p.heading}</h3>`:''}<p>${p.content||'Texte...'}</p></div>`;
-    case 'image': return `<div class="rc-image" style="aspect-ratio:${p.aspectRatio||'16/9'}">${p.src?`<img src="${p.src}" onerror="this.style.display='none'">`:'📷 Image'}</div>`;
-    case 'video': return `<div class="rc-video"><div class="play">▶</div><div class="vt">${p.title||'Vidéo'}</div></div>`;
-    case 'audio': return `<div class="rc-audio"><div class="a-icon">🎵</div><div class="a-info"><div class="a-title">${p.title||'Piste audio'}</div><div class="a-time">${p.artist||''} · ${p.duration||'0:00'}</div><div class="a-bar"><div class="a-fill"></div></div></div><span style="font-size:1.4rem;cursor:pointer">▶</span></div>`;
-    case 'btn-primary': return `<button class="rc-btn rc-btn-primary" style="background:${primary}" onclick="handleBtnAction('${p.action||''}','${p.actionValue||''}',event)">${p.text||'Bouton'}</button>`;
-    case 'btn-secondary': return `<button class="rc-btn rc-btn-secondary" onclick="handleBtnAction('${p.action||''}','${p.actionValue||''}',event)">${p.text||'Bouton'}</button>`;
-    case 'btn-outline': return `<button class="rc-btn rc-btn-outline" style="border-color:${primary};color:${primary}" onclick="handleBtnAction('${p.action||''}','${p.actionValue||''}',event)">${p.text||'Bouton'}</button>`;
-    case 'btn-danger': return `<button class="rc-btn rc-btn-danger" onclick="handleBtnAction('${p.action||''}','${p.actionValue||''}',event)">${p.text||'Bouton'}</button>`;
-    case 'input': return `<div class="rc-input-wrap"><label>${p.label||'Champ'}</label><input class="rc-input" type="${p.type||'text'}" placeholder="${p.placeholder||''}"></div>`;
-    case 'password': return `<div class="rc-input-wrap"><label>${p.label||'Mot de passe'}</label><input class="rc-input" type="password" placeholder="${p.placeholder||'••••••••'}"></div>`;
-    case 'select': return `<div class="rc-input-wrap"><label>${p.label||'Sélectionner'}</label><select class="rc-select">${(p.options||'Option 1\nOption 2').split('\n').map(o=>`<option>${o}</option>`).join('')}</select></div>`;
-    case 'checkbox': return `<div class="rc-checkbox-wrap"><input type="checkbox" ${p.checked?'checked':''}><label>${p.label||'Case à cocher'}</label></div>`;
-    case 'switch': return `<div class="rc-switch-wrap"><div class="rc-switch-label">${p.label||'Switch'}</div><div class="rc-sw ${p.on?'on':''}" onclick="this.classList.toggle('on')"></div></div>`;
-    case 'formwrap': return `<div class="rc-form-wrap"><div class="rc-form-title" style="color:${primary}">${p.title||'Formulaire'}</div><div class="rc-input-wrap"><label>Nom</label><input class="rc-input" placeholder="Votre nom"></div><div class="rc-input-wrap"><label>Message</label><input class="rc-input" placeholder="Votre message..."></div><button class="rc-btn rc-btn-primary" style="background:${primary};margin:8px 0 0">${p.submitText||'Envoyer'}</button></div>`;
-    case 'card': return `<div class="rc-card"><h4>${p.title||'Carte'}</h4><p>${p.content||'Contenu...'}</p></div>`;
-    case 'list': return `<div class="rc-list">${(p.items||'Item 1|Desc').split('\n').map(item=>{const[t,s]=item.split('|');return`<div class="rc-list-item"><div class="rc-list-icon">▸</div><div class="rc-list-text"><div class="rc-list-title">${t||''}</div>${s?`<div class="rc-list-sub">${s}</div>`:''}</div><div class="rc-list-arrow">›</div></div>`}).join('')}</div>`;
-    case 'badge': return `<div class="rc-badge-row">${(p.items||'Badge').split('\n').map(b=>`<span class="rc-badge" style="background:${primary}22;color:${primary};border-color:${primary}55">${b}</span>`).join('')}</div>`;
-    case 'tabs': return `<div class="rc-tabs">${(p.tabs||'Tab 1\nTab 2').split('\n').map((t,i)=>`<div class="rc-tab ${i==(p.active||0)?'active':''}" style="${i==(p.active||0)?`color:${primary};border-bottom-color:${primary}`:''}">${t}</div>`).join('')}</div>`;
-    case 'bottomnav': return `<div class="rc-bottom-nav">${(p.items||'🏠 Accueil\n👤 Profil').split('\n').map((item,i)=>{const[ic,...rest]=item.split(' ');return`<div class="rc-bnav-item ${i==(p.active||0)?'active':''}" style="${i==(p.active||0)?`color:${primary}`:''}"><div class="rc-bnav-icon">${ic}</div>${rest.join(' ')}</div>`}).join('')}</div>`;
-    case 'divider': return `<div class="rc-divider"></div>`;
-    case 'spacer': return `<div class="rc-spacer" style="height:${p.height||16}px"></div>`;
-    case 'progress': return `<div class="rc-progress-wrap"><div class="rc-progress-label"><span>${p.label||'Progression'}</span><span>${p.value||0}%</span></div><div class="rc-progress-bar"><div class="rc-progress-fill" style="width:${p.value||0}%;background:${primary}"></div></div></div>`;
-    case 'rating': return `<div class="rc-rating">${Array(p.max||5).fill(0).map((_,i)=>`<span class="star">${i<(p.value||4)?'⭐':'☆'}</span>`).join('')}<span class="rt">${p.label||''}</span></div>`;
-    case 'map': return `<div class="rc-map"><span style="font-size:2rem">🗺️</span><span>${p.address||'Localisation'}</span></div>`;
-    case 'countdown':{const h=String(p.hours||0).padStart(2,'0'),m=String(p.minutes||30).padStart(2,'0'),s=String(p.seconds||0).padStart(2,'0');return`<div class="rc-countdown"><div style="font-size:.72rem;font-weight:700;color:var(--mu);margin-bottom:6px">${p.label||'Offre expire dans'}</div><div class="cd-time" style="color:${primary}">${h}:${m}:${s}</div></div>`;}
-    case 'pricingcard': return `<div class="rc-price-card" style="background:linear-gradient(135deg,${primary},${primary}cc)"><div class="pc-name">${p.name||'Plan'}</div><div class="pc-price">${p.price||'9,99€'}</div>${(p.features||'').split('\n').map(f=>`<div class="pc-feat">✓ ${f.replace(/^[✓✔] /,'')}</div>`).join('')}</div>`;
-    case 'sociallogin': return `<div class="rc-social">${p.google!==false?`<button class="rc-social-btn rc-social-gg">🌐 Google</button>`:''}${p.facebook!==false?`<button class="rc-social-btn rc-social-fb">Facebook</button>`:''}${p.whatsapp?`<button class="rc-social-btn rc-social-wa">WhatsApp</button>`:''}</div>`;
-    case 'sharebar': return `<div class="rc-share-bar">${(p.platforms||'WhatsApp\nTelegram\nFacebook\nCopier').split('\n').map((pl,i)=>{const icons=['📱','✈️','👍','📋'];const colors=['#25d366','#0088cc','#1877f2','#6b7280'];return`<div class="rc-share-item"><div class="rc-share-icon" style="background:${colors[i%colors.length]}22">${icons[i%icons.length]}</div><div class="rc-share-label">${pl}</div></div>`}).join('')}</div>`;
-    case 'notif': return `<div class="rc-notif"><div class="ni">🔔</div><div><div class="nt">${p.title||'Notification'}</div><div class="ns">${p.message||'Message de notification'}</div></div></div>`;
-    case 'statrow': return `<div class="rc-stat-row">${(p.stats||'100|Stat').split('\n').map(s=>{const[v,l]=s.split('|');return`<div class="rc-stat"><div class="sv" style="color:${primary}">${v}</div><div class="sl">${l||''}</div></div>`}).join('')}</div>`;
-    case 'coursecard': return `<div class="rc-course-card"><div class="rc-course-img">${p.emoji||'📚'}</div><div class="rc-course-body"><div class="rc-course-title">${p.title||'Titre du cours'}</div><div class="rc-course-meta"><span>👨‍🏫 ${p.instructor||'Instructeur'}</span><span>⏱ ${p.duration||'2h'}</span></div><div class="rc-course-prog"><div class="rc-course-prog-fill" style="width:${p.progress||0}%;background:${primary}"></div></div></div></div>`;
-    case 'musicplayer': return `<div class="rc-music-player"><div class="rc-mp-cover">${p.emoji||'🎵'}</div><div class="rc-mp-title">${p.title||'Chanson'}</div><div class="rc-mp-artist">${p.artist||'Artiste'}</div><div class="rc-mp-controls"><button class="rc-mp-btn">⏮</button><button class="rc-mp-btn play" style="background:${primary}">▶</button><button class="rc-mp-btn">⏭</button></div></div>`;
-    case 'chatbubble': return `<div class="rc-chat-bubble"><div class="cb-msg recv">${p.message||'Message'}</div><div class="rc-cb-time">${p.time||''}</div></div>`;
-    case 'chatbubble-sent': return `<div class="rc-chat-bubble sent"><div class="cb-msg sent" style="background:${primary}">${p.message||'Message'}</div><div class="rc-cb-time">${p.time||''}</div></div>`;
-    default: return `<div style="padding:10px 16px;font-size:.8rem;color:var(--mu)">Composant: ${c.type}</div>`;
+async function openApp(id) {
+  try {
+    APP_ID = id;
+    const { data: a, error } = await sb.from('apps').select('*').eq('id', id).single();
+    if (error) throw error;
+    loadForm(a);
+    goStep(a.last_step || 0);
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('builderView').classList.add('active');
+  } catch (err) {
+    toast('Erreur ouverture: ' + err.message, 'err');
   }
 }
 
-// ════════════════════════════════════════════
-// COMPONENT ACTIONS
-// ════════════════════════════════════════════
-function selectComp(id,e){
-  if(e) e.stopPropagation();
-  selectedCompId=id;
-  document.querySelectorAll('.r-comp').forEach(el=>el.classList.remove('selected'));
-  const el=document.getElementById(id);
-  if(el) el.classList.add('selected');
-  showProps(id);
+function loadForm(a) {
+  document.getElementById('bldName').value = a.name || '';
+  document.getElementById('iconBtn').textContent = a.icon || '🚀';
+  document.getElementById('bName').value = a.name || '';
+  document.getElementById('bCat').value = a.category || '';
+  document.getElementById('bAudience').value = a.audience || '';
+  document.getElementById('bTagline').value = a.tagline || '';
+  document.getElementById('bDesc').value = a.description || '';
+  document.getElementById('bProblem').value = a.problem || '';
+  document.getElementById('bUVP').value = a.uvp || '';
+  document.getElementById('bBiz').value = a.biz_model || '';
+  document.getElementById('bPlat').value = a.platform || '';
+  document.getElementById('bFont').value = a.font || 'Nunito';
+  document.getElementById('bTone').value = a.tone || 'Professionnel';
+  COLOR = a.app_color || '#16a34a';
+  PAL = a.palette || null;
+  STY = a.style || null;
+  TAGS = Array.isArray(a.keywords) ? [...a.keywords] : [];
+  FEATS = Array.isArray(a.features_json) ? [...a.features_json] : [];
+  renderTags();
+  renderFeats();
+  buildColorGrid(COLOR);
+  buildPalList(PAL);
+  buildStyleGrid(STY);
+  resetBuildUI();
 }
 
-function delComp(id,e){
-  if(e){e.stopPropagation();}
-  const page=pages[currentPageIdx];
-  page.components=page.components.filter(c=>c.id!==id);
-  if(selectedCompId===id){selectedCompId=null;hideProps();}
-  renderCanvas();
-  autoSave();
-}
-
-function dupComp(id,e){
-  if(e){e.stopPropagation();}
-  const page=pages[currentPageIdx];
-  const idx=page.components.findIndex(c=>c.id===id);
-  if(idx<0) return;
-  const orig=page.components[idx];
-  const copy={...orig,id:uid(),props:{...orig.props}};
-  page.components.splice(idx+1,0,copy);
-  renderCanvas();
-  autoSave();
-  toast('Composant dupliqué','ok');
-}
-
-function moveComp(id,dir,e){
-  if(e){e.stopPropagation();}
-  const page=pages[currentPageIdx];
-  const idx=page.components.findIndex(c=>c.id===id);
-  const newIdx=idx+dir;
-  if(newIdx<0||newIdx>=page.components.length) return;
-  const tmp=page.components[idx];
-  page.components[idx]=page.components[newIdx];
-  page.components[newIdx]=tmp;
-  renderCanvas();
-  autoSave();
-}
-
-function handleBtnAction(action,value,e){
-  if(e) e.stopPropagation();
-  if(action==='alert') alert(value||'Action déclenchée !');
-  else if(action==='navigate'){const pi=pages.findIndex(p=>p.name===value);if(pi>=0)switchPage(pi);}
-  else if(action==='share') navigator.share?navigator.share({title:appData.name,url:window.location.href}):toast('Partage non supporté');
-  else if(action==='openUrl'&&value) window.open(value,'_blank');
-}
-
-// ════════════════════════════════════════════
-// PROPERTIES PANEL
-// ════════════════════════════════════════════
-function showProps(id){
-  const page=pages[currentPageIdx];
-  const comp=page.components.find(c=>c.id===id);
-  if(!comp) return;
-  const def=COMP_DEFS[comp.type]||{label:comp.type,icon:'⚙️'};
-  document.getElementById('rpNoSel').style.display='none';
-  document.getElementById('rpProps').style.display='block';
-  document.getElementById('rpTitle').textContent=`${def.icon||'⚙️'} ${def.label||comp.type}`;
-  renderPropsBody(comp);
-}
-
-function hideProps(){
-  document.getElementById('rpNoSel').style.display='block';
-  document.getElementById('rpProps').style.display='none';
-}
-
-function renderPropsBody(comp){
-  const p=comp.props||{};
-  let html='';
-  if(rpTab==='props'){
-    html=buildPropsFields(comp);
-  } else if(rpTab==='style'){
-    html=buildStyleFields(comp);
-  } else if(rpTab==='logic'){
-    html=buildLogicFields(comp);
-  }
-  document.getElementById('rpBody').innerHTML=html;
-}
-
-function buildPropsFields(comp){
-  const p=comp.props||{};
-  const fields={
-    title:`<div class="prop-row"><div class="prop-label">Titre</div><input class="prop-input" value="${esc(p.title||'')}" onchange="updateProp('${comp.id}','title',this.value)"></div>`,
-    subtitle:`<div class="prop-row"><div class="prop-label">Sous-titre</div><input class="prop-input" value="${esc(p.subtitle||'')}" onchange="updateProp('${comp.id}','subtitle',this.value)"></div>`,
-    text:`<div class="prop-row"><div class="prop-label">Texte</div><textarea class="prop-input" style="min-height:80px" onchange="updateProp('${comp.id}','text',this.value)">${esc(p.text||p.content||'')}</textarea></div>`,
-    content:`<div class="prop-row"><div class="prop-label">Contenu</div><textarea class="prop-input" style="min-height:80px" onchange="updateProp('${comp.id}','content',this.value)">${esc(p.content||'')}</textarea></div>`,
-    message:`<div class="prop-row"><div class="prop-label">Message</div><textarea class="prop-input" style="min-height:60px" onchange="updateProp('${comp.id}','message',this.value)">${esc(p.message||'')}</textarea></div>`,
-    label:`<div class="prop-row"><div class="prop-label">Label</div><input class="prop-input" value="${esc(p.label||'')}" onchange="updateProp('${comp.id}','label',this.value)"></div>`,
-    placeholder:`<div class="prop-row"><div class="prop-label">Placeholder</div><input class="prop-input" value="${esc(p.placeholder||'')}" onchange="updateProp('${comp.id}','placeholder',this.value)"></div>`,
-    src:`<div class="prop-row"><div class="prop-label">URL de l'image</div><input class="prop-input" placeholder="https://..." value="${esc(p.src||p.imageUrl||'')}" onchange="updateProp('${comp.id}','src',this.value);updateProp('${comp.id}','imageUrl',this.value)"></div>`,
-    items:`<div class="prop-row"><div class="prop-label">Éléments (1 par ligne, titre|desc)</div><textarea class="prop-input" style="min-height:80px" onchange="updateProp('${comp.id}','items',this.value)">${esc(p.items||'')}</textarea></div>`,
-    options:`<div class="prop-row"><div class="prop-label">Options (1 par ligne)</div><textarea class="prop-input" style="min-height:60px" onchange="updateProp('${comp.id}','options',this.value)">${esc(p.options||'')}</textarea></div>`,
-    tabs:`<div class="prop-row"><div class="prop-label">Onglets (1 par ligne)</div><textarea class="prop-input" style="min-height:60px" onchange="updateProp('${comp.id}','tabs',this.value)">${esc(p.tabs||'')}</textarea></div>`,
-    stats:`<div class="prop-row"><div class="prop-label">Stats (valeur|libellé, 1/ligne)</div><textarea class="prop-input" style="min-height:60px" onchange="updateProp('${comp.id}','stats',this.value)">${esc(p.stats||'')}</textarea></div>`,
-    value:`<div class="prop-row"><div class="prop-label">Valeur (%)</div><input class="prop-input" type="number" min="0" max="100" value="${p.value||0}" onchange="updateProp('${comp.id}','value',parseInt(this.value))"></div>`,
-    height:`<div class="prop-row"><div class="prop-label">Hauteur (px)</div><input class="prop-input" type="number" value="${p.height||16}" onchange="updateProp('${comp.id}','height',parseInt(this.value))"></div>`,
-    artist:`<div class="prop-row"><div class="prop-label">Artiste</div><input class="prop-input" value="${esc(p.artist||'')}" onchange="updateProp('${comp.id}','artist',this.value)"></div>`,
-    duration:`<div class="prop-row"><div class="prop-label">Durée</div><input class="prop-input" value="${esc(p.duration||'')}" onchange="updateProp('${comp.id}','duration',this.value)"></div>`,
-    progress:`<div class="prop-row"><div class="prop-label">Progression (%)</div><input class="prop-input" type="number" min="0" max="100" value="${p.progress||0}" onchange="updateProp('${comp.id}','progress',parseInt(this.value))"></div>`,
-    instructor:`<div class="prop-row"><div class="prop-label">Instructeur</div><input class="prop-input" value="${esc(p.instructor||'')}" onchange="updateProp('${comp.id}','instructor',this.value)"></div>`,
-    price:`<div class="prop-row"><div class="prop-label">Prix</div><input class="prop-input" value="${esc(p.price||'')}" onchange="updateProp('${comp.id}','price',this.value)"></div>`,
-    features:`<div class="prop-row"><div class="prop-label">Fonctionnalités (1/ligne)</div><textarea class="prop-input" style="min-height:70px" onchange="updateProp('${comp.id}','features',this.value)">${esc(p.features||'')}</textarea></div>`,
-    address:`<div class="prop-row"><div class="prop-label">Adresse</div><input class="prop-input" value="${esc(p.address||'')}" onchange="updateProp('${comp.id}','address',this.value)"></div>`,
-    hours:`<div class="prop-row-2"><div class="prop-row"><div class="prop-label">Heures</div><input class="prop-input" type="number" value="${p.hours||0}" onchange="updateProp('${comp.id}','hours',parseInt(this.value))"></div><div class="prop-row"><div class="prop-label">Minutes</div><input class="prop-input" type="number" value="${p.minutes||30}" onchange="updateProp('${comp.id}','minutes',parseInt(this.value))"></div></div>`,
-    time:`<div class="prop-row"><div class="prop-label">Heure affichée</div><input class="prop-input" value="${esc(p.time||'')}" onchange="updateProp('${comp.id}','time',this.value)"></div>`,
-    name:`<div class="prop-row"><div class="prop-label">Nom du plan</div><input class="prop-input" value="${esc(p.name||'')}" onchange="updateProp('${comp.id}','name',this.value)"></div>`,
-    btnText:`<div class="prop-row"><div class="prop-label">Texte du bouton</div><input class="prop-input" value="${esc(p.text||'')}" onchange="updateProp('${comp.id}','text',this.value)"></div>`,
-    align:`<div class="prop-row"><div class="prop-label">Alignement</div><select class="prop-input prop-select" onchange="updateProp('${comp.id}','align',this.value)"><option value="left" ${p.align==='left'?'selected':''}>Gauche</option><option value="center" ${p.align==='center'?'selected':''}>Centre</option><option value="right" ${p.align==='right'?'selected':''}>Droite</option></select></div>`,
-    heading:`<div class="prop-row"><div class="prop-label">Titre (optionnel)</div><input class="prop-input" value="${esc(p.heading||'')}" onchange="updateProp('${comp.id}','heading',this.value)"></div>`,
-    platforms:`<div class="prop-row"><div class="prop-label">Plateformes (1/ligne)</div><textarea class="prop-input" style="min-height:60px" onchange="updateProp('${comp.id}','platforms',this.value)">${esc(p.platforms||'WhatsApp\nTelegram\nFacebook\nCopier')}</textarea></div>`,
-    emoji:`<div class="prop-row"><div class="prop-label">Emoji / Icône</div><input class="prop-input" value="${esc(p.emoji||'')}" onchange="updateProp('${comp.id}','emoji',this.value)" style="font-size:1.2rem"></div>`,
-  };
-  const compFields={
-    'header':['title','subtitle'],
-    'hero':['title','subtitle','src'],
-    'text':['heading','content','align'],
-    'image':['src'],
-    'video':['title'],
-    'audio':['title','artist','duration'],
-    'btn-primary':['btnText'],'btn-secondary':['btnText'],'btn-outline':['btnText'],'btn-danger':['btnText'],
-    'input':['label','placeholder'],
-    'password':['label','placeholder'],
-    'select':['label','options'],
-    'checkbox':['label'],
-    'switch':['label'],
-    'formwrap':['title','btnText'],
-    'card':['title','content'],
-    'list':['items'],
-    'badge':['items'],
-    'tabs':['tabs'],
-    'bottomnav':['items'],
-    'spacer':['height'],
-    'progress':['label','value'],
-    'rating':['value'],
-    'map':['address'],
-    'countdown':['label','hours'],
-    'pricingcard':['name','price','features'],
-    'sociallogin':[],
-    'sharebar':['platforms'],
-    'notif':['title','message'],
-    'statrow':['stats'],
-    'coursecard':['emoji','title','instructor','duration','progress'],
-    'musicplayer':['emoji','title','artist'],
-    'chatbubble':['message','time'],
-    'chatbubble-sent':['message','time'],
-  };
-  const toRender=compFields[comp.type]||[];
-  return toRender.map(f=>fields[f]||'').join('')||`<div style="font-size:.8rem;color:var(--mu);padding:10px">Aucune propriété configurable.</div>`;
-}
-
-function buildStyleFields(comp){
-  const p=comp.props||{};
-  return`<div class="prop-group">
-    <div class="prop-group-title">Couleur de fond</div>
-    <div class="color-row">
-      <input type="color" class="color-swatch" value="${p.bgColor||appData.color}" onchange="updateProp('${comp.id}','bgColor',this.value)">
-      <input class="prop-input" value="${p.bgColor||''}" placeholder="ex: #ffffff" onchange="updateProp('${comp.id}','bgColor',this.value)" style="flex:1">
-    </div>
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Couleur du texte</div>
-    <div class="color-row">
-      <input type="color" class="color-swatch" value="${p.textColor||'#111827'}" onchange="updateProp('${comp.id}','textColor',this.value)">
-      <input class="prop-input" value="${p.textColor||''}" placeholder="ex: #000000" onchange="updateProp('${comp.id}','textColor',this.value)" style="flex:1">
-    </div>
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Taille de police</div>
-    <select class="prop-input prop-select" onchange="updateProp('${comp.id}','fontSize',this.value)">
-      <option value="">Par défaut</option>
-      <option value="12px" ${p.fontSize==='12px'?'selected':''}>Petit (12px)</option>
-      <option value="14px" ${p.fontSize==='14px'?'selected':''}>Normal (14px)</option>
-      <option value="18px" ${p.fontSize==='18px'?'selected':''}>Grand (18px)</option>
-      <option value="24px" ${p.fontSize==='24px'?'selected':''}>Très grand (24px)</option>
-    </select>
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Espacement interne (px)</div>
-    <input class="prop-input" type="number" value="${p.padding||''}" placeholder="ex: 16" onchange="updateProp('${comp.id}','padding',this.value+'px')">
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Bordure arrondie (px)</div>
-    <input class="prop-input" type="number" value="${p.borderRadius||''}" placeholder="ex: 12" onchange="updateProp('${comp.id}','borderRadius',this.value+'px')">
-  </div>`;
-}
-
-function buildLogicFields(comp){
-  const logics=comp.logics||[];
-  let html=`<div class="prop-group"><div class="prop-group-title">Actions au clic</div>
-    <div class="logic-list">${logics.map((l,i)=>`<div class="logic-item"><div class="logic-icon">${logicIcon(l.type)}</div><span style="flex:1">${logicLabel(l.type)}</span>${l.value?`<small style="color:var(--mu);font-size:.65rem">${l.value}</small>`:''}
-    <span style="cursor:pointer;color:var(--red);margin-left:6px" onclick="removeLogic('${comp.id}',${i})">✕</span></div>`).join('')}
-    </div>
-    <div class="logic-add" onclick="openLogicModal('${comp.id}')">+ Ajouter une action</div>
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Naviguer vers (page)</div>
-    <select class="prop-input prop-select" onchange="updateProp('${comp.id}','actionValue',this.value);updateProp('${comp.id}','action','navigate')">
-      <option value="">Sélectionner une page...</option>
-      ${pages.map(p=>`<option value="${p.name}" ${comp.props&&comp.props.actionValue===p.name?'selected':''}>${p.name}</option>`).join('')}
-    </select>
-  </div>
-  <div class="prop-group">
-    <div class="prop-group-title">Ou afficher un message</div>
-    <input class="prop-input" placeholder="Message à afficher..." value="${comp.props&&comp.props.action==='alert'?comp.props.actionValue||'':''}" onchange="updateProp('${comp.id}','action','alert');updateProp('${comp.id}','actionValue',this.value)">
-  </div>`;
-  return html;
-}
-
-function logicIcon(type){return{navigate:'🔗',alert:'💬',submit:'📤',toggle:'🔄',share:'📢',openUrl:'🌐'}[type]||'⚡';}
-function logicLabel(type){return{navigate:'Naviguer',alert:'Afficher message',submit:'Soumettre formulaire',toggle:'Toggle élément',share:'Partager',openUrl:'Ouvrir URL'}[type]||type;}
-
-let logicTargetId=null;
-function openLogicModal(compId){logicTargetId=compId;openModal('logicModal');}
-function addLogic(type){
-  if(!logicTargetId) return;
-  const page=pages[currentPageIdx];
-  const comp=page.components.find(c=>c.id===logicTargetId);
-  if(!comp) return;
-  if(!comp.logics) comp.logics=[];
-  comp.logics.push({type,value:''});
-  closeModal('logicModal');
-  showProps(logicTargetId);
-  autoSave();
-  toast('Action ajoutée','ok');
-}
-function removeLogic(compId,idx){
-  const comp=pages[currentPageIdx].components.find(c=>c.id===compId);
-  if(comp&&comp.logics) comp.logics.splice(idx,1);
-  showProps(compId);
-  autoSave();
-}
-
-function updateProp(compId,key,val){
-  const page=pages[currentPageIdx];
-  const comp=page.components.find(c=>c.id===compId);
-  if(!comp) return;
-  if(!comp.props) comp.props={};
-  comp.props[key]=val;
-  // Apply inline style if style prop
-  const el=document.getElementById(compId);
-  if(el&&key==='bgColor') el.style.backgroundColor=val;
-  renderCanvas();
-  if(selectedCompId===compId) selectComp(compId,null);
-  autoSave();
-}
-
-function switchRpTab(tab,el){
-  rpTab=tab;
-  document.querySelectorAll('.rp-tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  if(selectedCompId){
-    const comp=pages[currentPageIdx].components.find(c=>c.id===selectedCompId);
-    if(comp) renderPropsBody(comp);
-  }
-}
-
-// ════════════════════════════════════════════
-// DRAG AND DROP
-// ════════════════════════════════════════════
-function setupDragDrop(){
-  document.querySelectorAll('[draggable=true]').forEach(el=>{
-    el.addEventListener('dragstart',e=>{
-      dragComp=el.dataset.comp;
-      e.dataTransfer.effectAllowed='copy';
-    });
-    el.addEventListener('click',()=>addCompToCanvas(el.dataset.comp));
+function resetForm() {
+  document.getElementById('bldName').value = '';
+  document.getElementById('iconBtn').textContent = '🚀';
+  ['bName','bCat','bAudience','bTagline','bDesc','bProblem','bUVP','bBiz','bPlat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.tagName === 'SELECT' ? el.selectedIndex = 0 : el.value = '';
   });
+  document.getElementById('bFont').value = 'Nunito';
+  document.getElementById('bTone').value = 'Professionnel';
+  COLOR = '#16a34a'; PAL = null; STY = null; TAGS = []; FEATS = [];
+  renderTags(); renderFeats();
+  buildColorGrid('#16a34a'); buildPalList(null); buildStyleGrid(null);
+  resetBuildUI();
 }
 
-function onDragOver(e){
+// ═══════════════════════════════════════════════════════
+// SAVE — avec toutes les colonnes correctes
+// ═══════════════════════════════════════════════════════
+async function saveApp() {
+  if (!APP_ID) return;
+  clearTimeout(saveTimer);
+  setSaveInd('saving');
+  const name = v('bName') || v('bldName');
+  const payload = {
+    name,
+    icon: document.getElementById('iconBtn').textContent,
+    category: v('bCat'),
+    audience: v('bAudience'),
+    tagline: v('bTagline'),
+    keywords: TAGS,
+    description: v('bDesc'),
+    problem: v('bProblem'),
+    uvp: v('bUVP'),
+    biz_model: v('bBiz'),
+    platform: v('bPlat'),
+    features_json: FEATS,
+    app_color: COLOR,
+    palette: PAL || '',
+    style: STY || '',
+    font: v('bFont') || 'Nunito',
+    tone: v('bTone') || 'Professionnel',
+    last_step: STEP,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('apps').update(payload).eq('id', APP_ID);
+  if (error) { setSaveInd('error'); console.error('Save error:', error); }
+  else { setSaveInd('saved'); document.getElementById('bldName').value = name; }
+}
+
+function triggerSave() {
+  clearTimeout(saveTimer);
+  setSaveInd('saving');
+  saveTimer = setTimeout(saveApp, 1200);
+}
+
+function syncName() {
+  document.getElementById('bldName').value = v('bName');
+}
+
+function setSaveInd(state) {
+  const el = document.getElementById('saveInd');
+  if (state === 'saving') el.textContent = '⏳ Sauvegarde...';
+  else if (state === 'saved') el.textContent = '✓ Sauvegardé';
+  else el.textContent = '⚠ Erreur save';
+}
+
+async function saveAndExit() {
+  await saveApp();
+  switchHome();
+  toast('App sauvegardée ✓', 'ok');
+}
+
+function confirmDel(id, e) {
+  if (e) e.stopPropagation();
+  appToDelete = id;
+  document.getElementById('delConfirmBtn').onclick = async () => {
+    const { error } = await sb.from('apps').delete().eq('id', id);
+    if (error) { toast('Erreur: ' + error.message, 'err'); return; }
+    closeModal('delModal');
+    toast('App supprimée ✓', 'ok');
+    await loadDashboard();
+  };
+  openModal('delModal');
+}
+
+// ═══════════════════════════════════════════════════════
+// STEPS
+// ═══════════════════════════════════════════════════════
+function goStep(n) {
+  saveApp();
+  STEP = n;
+  document.querySelectorAll('.panel').forEach((p, i) => p.classList.toggle('active', i === n));
+  document.querySelectorAll('.st').forEach((t, i) => {
+    t.classList.remove('active', 'done');
+    if (i === n) t.classList.add('active');
+    else if (i < n) t.classList.add('done');
+  });
+  document.querySelectorAll('.ferr,.vmsg').forEach(e => e.classList.remove('show'));
+  if (n === 4) renderBuildPanel();
+  document.querySelector('.bld-body').scrollTop = 0;
+}
+function nextStep() { if (validateStep(STEP) && STEP < 4) goStep(STEP + 1); }
+function prevStep() { if (STEP > 0) goStep(STEP - 1); }
+
+function validateStep(n) {
+  saveApp();
+  let ok = true;
+  const se = id => { document.getElementById(id).classList.add('show'); ok = false; };
+  if (n === 0) {
+    if (!v('bName')) se('eName');
+    if (!v('bCat')) se('eCat');
+    if (!v('bTagline')) se('eTagline');
+  } else if (n === 1) {
+    if (!v('bDesc')) se('eDesc');
+    if (!v('bProblem')) se('eProb');
+  } else if (n === 2) {
+    if (!FEATS.length) { showVM('vm2', 'Ajoute au moins une fonctionnalité.'); ok = false; }
+  } else if (n === 3) {
+    if (!PAL) se('ePal');
+  }
+  return ok;
+}
+function showVM(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+
+// ═══════════════════════════════════════════════════════
+// EMOJI PICKER
+// ═══════════════════════════════════════════════════════
+function buildEmojiGrid() {
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
+    `<span class="e-o" onclick="pickEmoji('${e}')">${e}</span>`
+  ).join('');
+}
+function toggleEmoji() {
+  const p = document.getElementById('emojiPicker');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+function pickEmoji(e) {
+  document.getElementById('iconBtn').textContent = e;
+  document.getElementById('emojiPicker').style.display = 'none';
+  triggerSave();
+}
+
+// ═══════════════════════════════════════════════════════
+// TAGS
+// ═══════════════════════════════════════════════════════
+function renderTags() {
+  const box = document.getElementById('tagsBox');
+  const inp = document.getElementById('tagIn');
+  box.innerHTML = '';
+  TAGS.forEach((t, i) => {
+    const el = document.createElement('span');
+    el.className = 'tag';
+    el.innerHTML = `${esc(t)}<span class="tag-x" onclick="removeTag(${i})">×</span>`;
+    box.appendChild(el);
+  });
+  box.appendChild(inp);
+}
+function removeTag(i) { TAGS.splice(i, 1); renderTags(); triggerSave(); }
+function addTag(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
   e.preventDefault();
-  e.dataTransfer.dropEffect='copy';
-  document.getElementById('canvasBody').classList.add('drag-over');
-}
-function onDragLeave(){document.getElementById('canvasBody').classList.remove('drag-over');}
-function onDrop(e){
-  e.preventDefault();
-  document.getElementById('canvasBody').classList.remove('drag-over');
-  if(dragComp) addCompToCanvas(dragComp);
-  dragComp=null;
+  const val = e.target.value.trim().replace(',', '');
+  if (val && !TAGS.includes(val)) { TAGS.push(val); renderTags(); triggerSave(); }
+  else e.target.value = '';
 }
 
-function addCompToCanvas(type){
-  const def=COMP_DEFS[type];
-  if(!def) return;
-  const comp={id:uid(),type,props:{...(def.defaults||{})},logics:[]};
-  pages[currentPageIdx].components.push(comp);
-  renderCanvas();
-  selectComp(comp.id,null);
-  autoSave();
-  document.getElementById('canvasPhone').scrollTop=9999;
-}
-
-// ════════════════════════════════════════════
-// PAGES
-// ════════════════════════════════════════════
-function switchPage(idx){
-  currentPageIdx=idx;
-  selectedCompId=null;
-  hideProps();
-  renderAll();
-}
-
-function openPageModal(){openModal('pageModal');}
-function selTemplate(el,t){
-  selectedTemplate=t;
-  document.querySelectorAll('#pageTemplates .comp-item').forEach(i=>i.style.outline='none');
-  el.style.outline='2px solid var(--g)';
-}
-
-function addPage(){
-  const name=document.getElementById('newPageName').value.trim()||`Page ${pages.length+1}`;
-  const template=TEMPLATES[selectedTemplate]||[];
-  const comps=template.map(c=>({id:uid(),type:c.type,props:{...c.props},logics:[]}));
-  pages.push({id:uid(),name,components:comps});
-  currentPageIdx=pages.length-1;
-  closeModal('pageModal');
-  document.getElementById('newPageName').value='';
-  selectedTemplate='blank';
-  document.querySelectorAll('#pageTemplates .comp-item').forEach(i=>i.style.outline='none');
-  renderAll();
-  autoSave();
-  toast(`Page "${name}" créée`,'ok');
-}
-
-function deletePage(idx,e){
-  if(e) e.stopPropagation();
-  if(pages.length<=1){toast('Impossible de supprimer la seule page','err');return;}
-  if(!confirm(`Supprimer la page "${pages[idx].name}" ?`)) return;
-  pages.splice(idx,1);
-  if(currentPageIdx>=pages.length) currentPageIdx=pages.length-1;
-  renderAll();
-  autoSave();
-}
-
-// ════════════════════════════════════════════
-// APP COLOR & SETTINGS
-// ════════════════════════════════════════════
-function setAppColor(el){
-  document.querySelectorAll('.color-opt').forEach(c=>c.classList.remove('sel'));
-  el.classList.add('sel');
-  setCanvasColor(el.dataset.c);
-  appData.color=el.dataset.c;
-  renderCanvas();
-  autoSave();
-}
-function setAppColorHex(c){
-  appData.color=c;
-  setCanvasColor(c);
-  renderCanvas();
-  autoSave();
-}
-function setCanvasColor(c){
-  document.getElementById('canvasPhone').style.setProperty('--app-primary',c);
-}
-
-// ════════════════════════════════════════════
-// ZOOM
-// ════════════════════════════════════════════
-function zoomCanvas(dir){
-  if(dir===0){canvasZoom=1;}
-  else{canvasZoom=Math.min(1.5,Math.max(0.5,canvasZoom+dir*0.1));}
-  document.getElementById('canvasPhone').style.transform=`scale(${canvasZoom})`;
-  document.getElementById('canvasPhone').style.transformOrigin='top center';
-}
-
-// ════════════════════════════════════════════
-// PUBLISH & DOWNLOAD
-// ════════════════════════════════════════════
-function previewApp(){
-  const html=generateAppHTML(true);
-  const w=window.open('','_blank');
-  w.document.write(html);
-  w.document.close();
-}
-
-function openPublishModal(){
-  const id=appId||'demo';
-  document.getElementById('shareLink').textContent=`https://apkbuilding.app/view/${id}`;
-  openModal('publishModal');
-}
-
-function copyShareLink(){
-  navigator.clipboard.writeText(document.getElementById('shareLink').textContent);
-  toast('Lien copié !','ok');
-}
-
-);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=`${appName}.html`; a.click();
-  URL.revokeObjectURL(url);
-  toast('📥 App téléchargée !','ok');
-  if(appId) sb.from('apps').update({status:'ready',apk_built_at:new Date().toISOString()}).eq('id',appId);
-}
-
-function generateAppHTML(isPreview){
-  const primary=appData.color||'#16a34a';
-  const name=appData.name||'Mon App';
-  // Render all pages
-  const pagesHTML=pages.map((page,pi)=>`
-    <div class="app-page ${pi===0?'active':''}" id="page-${pi}">
-      ${page.components.map(c=>buildCompHTML(c)).join('')}
+// ═══════════════════════════════════════════════════════
+// FEATURES
+// ═══════════════════════════════════════════════════════
+let featEmojiIdx = {};
+function renderFeats() {
+  document.getElementById('featList').innerHTML = FEATS.map((f, i) => `
+    <div class="feat-card">
+      <div class="feat-top">
+        <div class="feat-icon" onclick="cycFeatEmoji(${i})">${f.icon||'⭐'}</div>
+        <div class="feat-inputs">
+          <input type="text" placeholder="Nom de la fonctionnalité" value="${esc(f.name||'')}" oninput="upFeat(${i},'name',this.value)">
+          <input type="text" placeholder="Description courte..." value="${esc(f.desc||'')}" oninput="upFeat(${i},'desc',this.value)">
+        </div>
+      </div>
+      <div class="feat-foot">
+        <div class="prio-btns">
+          <button class="pb ${f.priority==='MVP'?'mvp':''}" onclick="setPrio(${i},'MVP')">MVP</button>
+          <button class="pb ${f.priority==='V2'?'v2':''}" onclick="setPrio(${i},'V2')">V2</button>
+          <button class="pb ${f.priority==='V3'?'v3':''}" onclick="setPrio(${i},'V3')">V3</button>
+        </div>
+        <button class="del-feat" onclick="delFeat(${i})">🗑</button>
+      </div>
     </div>`).join('');
-
-  return`<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>${name}</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{--primary:${primary}}
-body{font-family:'Nunito',sans-serif;background:#f9fafb;color:#111;max-width:430px;margin:0 auto;min-height:100vh}
-.app-page{display:none;min-height:100vh;flex-direction:column}
-.app-page.active{display:flex}
-${getBaseStyles(primary)}
-</style>
-</head>
-<body>
-${pagesHTML}
-<script>
-var currentPage=0;
-var pages=document.querySelectorAll('.app-page');
-function navigateTo(idx){
-  pages.forEach(function(p){p.classList.remove('active')});
-  if(pages[idx]) pages[idx].classList.add('active');
-  currentPage=idx;
 }
-document.addEventListener('click',function(e){
-  var btn=e.target.closest('.rc-btn');
-  if(btn){
-    var action=btn.dataset.action;
-    var val=btn.dataset.actionValue;
-    if(action==='alert'&&val) alert(val);
-    else if(action==='navigate'){
-      var pi=Array.from(pages).findIndex(function(p){return p.dataset.name===val});
-      if(pi>=0) navigateTo(pi);
-    }
-    else if(action==='share'&&navigator.share) navigator.share({title:'${name}',url:window.location.href});
-    else if(action==='openUrl'&&val) window.open(val,'_blank');
+function addFeat() { FEATS.push({icon:'⭐',name:'',desc:'',priority:'MVP'}); renderFeats(); }
+function upFeat(i,k,val) { FEATS[i][k]=val; triggerSave(); }
+function cycFeatEmoji(i) {
+  featEmojiIdx[i]=((featEmojiIdx[i]||0)+1)%FEAT_EMOJIS.length;
+  FEATS[i].icon=FEAT_EMOJIS[featEmojiIdx[i]];
+  renderFeats(); triggerSave();
+}
+function setPrio(i,p) { FEATS[i].priority=p; renderFeats(); triggerSave(); }
+function delFeat(i) { FEATS.splice(i,1); renderFeats(); triggerSave(); }
+
+// ═══════════════════════════════════════════════════════
+// COLOR / PALETTE / STYLE
+// ═══════════════════════════════════════════════════════
+function buildColorGrid(sel) {
+  const COLS = ['#16a34a','#0ea5e9','#8b5cf6','#ef4444','#f97316','#f59e0b','#ec4899','#1f2937'];
+  document.getElementById('colorGrid').innerHTML = COLS.map(c =>
+    `<div class="col-opt ${(sel||'#16a34a')===c?'sel':''}" style="background:${c}" onclick="setColor('${c}',this)"></div>`
+  ).join('');
+  document.getElementById('customColor').value = sel || '#16a34a';
+}
+function setColor(c, el) {
+  COLOR = c;
+  document.querySelectorAll('.col-opt').forEach(e => e.classList.remove('sel'));
+  if (el) el.classList.add('sel');
+  document.getElementById('customColor').value = c;
+  triggerSave();
+}
+
+function buildPalList(sel) {
+  document.getElementById('palList').innerHTML = PALETTES.map(p =>
+    `<div class="pal-opt ${sel===p.name?'sel':''}" onclick="selPal('${p.name}')">
+      <div class="pal-sw">${p.colors.map(c=>`<div class="ps2" style="background:${c}"></div>`).join('')}</div>
+      <div><div class="pal-name">${p.name}</div><div class="pal-desc">${p.desc}</div></div>
+    </div>`
+  ).join('');
+}
+function selPal(name) {
+  PAL = name; buildPalList(name);
+  document.getElementById('ePal').classList.remove('show');
+  triggerSave();
+}
+
+function buildStyleGrid(sel) {
+  document.getElementById('styleGrid').innerHTML = STYLES.map(s =>
+    `<div class="sty-card ${sel===s.id?'sel':''}" onclick="selSty('${s.id}')">
+      <div class="sty-icon">${s.icon}</div>
+      <div class="sty-name">${s.name}</div>
+      <div class="sty-desc">${s.desc}</div>
+    </div>`
+  ).join('');
+}
+function selSty(id) { STY = id; buildStyleGrid(id); triggerSave(); }
+
+// ═══════════════════════════════════════════════════════
+// BUILD PANEL
+// ═══════════════════════════════════════════════════════
+function renderBuildPanel() {
+  const name = v('bName') || v('bldName') || 'Mon App';
+  const icon = document.getElementById('iconBtn').textContent;
+  const cat = v('bCat') || '—';
+  const plat = v('bPlat') || 'Android';
+  const biz = v('bBiz') || '—';
+  const desc = v('bDesc') || v('bTagline') || '';
+  const pal = PALETTES.find(p => p.name === PAL) || PALETTES[0];
+  const mvp = FEATS.filter(f => f.priority === 'MVP');
+  const v2 = FEATS.filter(f => f.priority === 'V2');
+  const v3 = FEATS.filter(f => f.priority === 'V3');
+
+  document.getElementById('sumCard').innerHTML = `
+    <div class="sum-head">
+      <div class="sum-icon" style="background:linear-gradient(135deg,${COLOR},${pal.colors[1]||COLOR})">${icon}</div>
+      <div><div class="sum-name">${esc(name)}</div><div class="sum-tag">${cat} · ${plat}</div></div>
+    </div>
+    <div class="sum-desc">${esc(desc.slice(0,120))}${desc.length>120?'...':''}</div>
+    <div class="sum-chips">
+      ${biz!=='—'?`<span class="chip">💰 ${biz}</span>`:''}
+      <span class="chip">📱 ${plat}</span>
+      <span class="chip">🎨 ${v('bFont')||'Nunito'}</span>
+      ${TAGS.slice(0,3).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}
+    </div>`;
+
+  const stackMap = {'Android':'React Native · Expo · TypeScript','iOS & Android':'React Native · Expo · TypeScript','Web + Mobile':'React Native Web · Next.js','Tous':'Flutter · Dart'};
+  const front = stackMap[plat] || 'React Native · Expo';
+  const back = biz === 'B2B SaaS' ? 'Node.js · PostgreSQL · Stripe' : 'Supabase · PostgreSQL';
+  document.getElementById('stackDisplay').innerHTML = `
+    <div class="stack-sec"><div class="stack-lbl">Frontend & Mobile</div><div class="stack-pills">${front.split('·').map(s=>`<div class="spill">${s.trim()}</div>`).join('')}</div></div>
+    <div class="stack-sec"><div class="stack-lbl">Backend</div><div class="stack-pills">${back.split('·').map(s=>`<div class="spill">${s.trim()}</div>`).join('')}</div></div>
+    <div class="stack-sec"><div class="stack-lbl">Build & Deploy</div><div class="stack-pills">${['Expo EAS','GitHub Actions','Google Play','Firebase'].map(s=>`<div class="spill">${s}</div>`).join('')}</div></div>`;
+
+  const phases = [
+    {n:'01',t:'Discovery & Design',d:'1-2 sem',tasks:['Wireframes Figma','Tests UX','Setup Expo','Config Supabase']},
+    {n:'02',t:`MVP — ${mvp.length} feature${mvp.length!==1?'s':''}`,d:'3-6 sem',tasks:[...mvp.slice(0,3).map(f=>`Feature: ${f.name||'—'}`),'Tests device','Build APK debug']},
+    {n:'03',t:'Beta & Feedback',d:'2-3 sem',tasks:['Distribution APK','Collecte retours','Corrections bugs','Analytics']},
+    {n:'04',t:`V2 — ${v2.length} amélio`,d:'4-8 sem',tasks:[...v2.slice(0,2).map(f=>`Feature: ${f.name||'—'}`),'Optimisation perf','Publication Play Store']},
+    {n:'05',t:'Scale & V3',d:'Ongoing',tasks:[...v3.slice(0,2).map(f=>`Feature: ${f.name||'—'}`),'Monétisation','Internationalisation']}
+  ];
+  document.getElementById('roadmap').innerHTML = phases.map(p => `
+    <div class="rph">
+      <div class="rph-dot">${p.n}</div>
+      <div class="rph-t">${esc(p.t)} <span class="rph-d">· ${p.d}</span></div>
+      <div class="rph-tasks">${p.tasks.map(t=>`<div class="rph-task">${esc(t)}</div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD & DOWNLOAD
+// ═══════════════════════════════════════════════════════
+async function startBuild() {
+  await saveApp();
+  const btn = document.getElementById('buildBtn');
+  btn.disabled = true;
+  document.getElementById('buildSpin').style.display = 'block';
+  document.getElementById('buildTxt').textContent = 'Compilation...';
+  document.getElementById('buildProg').style.display = 'block';
+  document.getElementById('buildStatus').style.display = 'block';
+  document.getElementById('buildLogs').style.display = 'block';
+  document.getElementById('buildLogs').textContent = '';
+  document.getElementById('dlBtn').classList.remove('show');
+
+  for (let i = 0; i < BUILD_LOG.length; i++) {
+    await delay(i === 6 ? 2000 : 850);
+    const pct = Math.round(((i + 1) / BUILD_LOG.length) * 100);
+    document.getElementById('buildBar').style.width = pct + '%';
+    document.getElementById('buildStatus').textContent = `Progression : ${pct}%`;
+    const logs = document.getElementById('buildLogs');
+    logs.textContent += BUILD_LOG[i] + '\n';
+    logs.scrollTop = logs.scrollHeight;
   }
-});
-<\/script>
 
-<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;display:flex;z-index:100;box-shadow:0 -4px 14px rgba(0,0,0,.06)">
-  <a href="dashboard.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#16a34a;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">🏠</span>Dashboard
-  </a>
-  <a href="profile.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#6b7280;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">👤</span>Profil
-  </a>
-  <a href="devis.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#6b7280;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">💼</span>Devis
-  </a>
-</div>
-</body>
-</html>`;
-}
-
-function getBaseStyles(primary){
-  return`.rc-header{background:${primary};color:#fff;padding:16px;text-align:center}.rc-header h1{font-size:1.3rem;font-weight:900}.rc-header p{font-size:.8rem;opacity:.85;margin-top:3px}
-.rc-hero{padding:24px 16px;text-align:center}.rc-hero h2{font-size:1.4rem;font-weight:900;margin-bottom:8px}.rc-hero p{font-size:.85rem;color:#6b7280;line-height:1.5}
-.rc-btn{display:block;width:calc(100% - 32px);margin:8px 16px;padding:14px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:800;border:none;cursor:pointer;text-align:center}
-.rc-btn-primary{background:${primary};color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.15)}
-.rc-btn-secondary{background:#f3f4f6;color:#374151}
-.rc-btn-outline{background:transparent;border:2px solid ${primary};color:${primary}}
-.rc-btn-danger{background:#ef4444;color:#fff}
-.rc-input-wrap{padding:8px 16px}.rc-input-wrap label{display:block;font-size:.72rem;font-weight:800;color:#374151;margin-bottom:5px;text-transform:uppercase}
-.rc-input,.rc-select{width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:11px 13px;font-size:.88rem;font-family:'Nunito',sans-serif;outline:none}
-.rc-card{margin:10px 16px;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.rc-card h4{font-size:.88rem;font-weight:800;margin-bottom:6px}.rc-card p{font-size:.78rem;color:#6b7280;line-height:1.5}
-.rc-text{padding:12px 16px;font-size:.88rem;line-height:1.6;color:#374151}.rc-text h3{font-size:1rem;font-weight:900;color:#111;margin-bottom:6px}
-.rc-divider{height:1px;background:#e5e7eb;margin:8px 16px}.rc-spacer{background:transparent}
-.rc-list{padding:8px 16px}.rc-list-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e5e7eb}.rc-list-item:last-child{border-bottom:none}.rc-list-title{font-size:.88rem;font-weight:700}.rc-list-sub{font-size:.72rem;color:#6b7280;margin-top:2px}
-.rc-badge-row{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px}.rc-badge{display:inline-block;font-size:.72rem;font-weight:800;padding:4px 12px;border-radius:100px;background:${primary}22;color:${primary}}
-.rc-tabs{display:flex;border-bottom:2px solid #e5e7eb;margin:0 16px}.rc-tab{flex:1;padding:10px;text-align:center;font-size:.78rem;font-weight:800;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}.rc-tab.active{color:${primary};border-bottom-color:${primary}}
-.rc-bottom-nav{display:flex;background:#fff;border-top:1px solid #e5e7eb;position:sticky;bottom:0}.rc-bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px;font-size:.6rem;font-weight:700;color:#6b7280;cursor:pointer;gap:3px}.rc-bnav-item.active{color:${primary}}.rc-bnav-icon{font-size:1.2rem}
-.rc-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 16px}.rc-stat{background:#f0fdf4;border:1px solid #dcfce7;border-radius:10px;padding:14px;text-align:center}.rc-stat .sv{font-size:1.4rem;font-weight:900;color:${primary}}.rc-stat .sl{font-size:.65rem;font-weight:700;color:#6b7280;text-transform:uppercase}
-.rc-progress-wrap{padding:8px 16px}.rc-progress-label{display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;margin-bottom:5px}.rc-progress-bar{height:8px;background:#e5e7eb;border-radius:100px;overflow:hidden}.rc-progress-fill{height:100%;background:${primary};border-radius:100px}
-.rc-notif{margin:8px 16px;display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#fff;border-left:3px solid ${primary};border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.rc-notif .nt{font-size:.82rem;font-weight:700;margin-bottom:2px}.rc-notif .ns{font-size:.72rem;color:#6b7280}
-.rc-music-player{margin:10px 16px;background:linear-gradient(135deg,#1f2937,#374151);border-radius:16px;padding:20px;color:#fff;text-align:center}.rc-mp-cover{width:80px;height:80px;border-radius:12px;background:${primary};margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem}.rc-mp-title{font-size:.92rem;font-weight:800;margin-bottom:2px}.rc-mp-artist{font-size:.75rem;opacity:.7;margin-bottom:14px}.rc-mp-controls{display:flex;align-items:center;justify-content:center;gap:16px}.rc-mp-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer}.rc-mp-btn.play{width:50px;height:50px;font-size:1.3rem;background:${primary}}
-.rc-course-card{margin:10px 16px;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden}.rc-course-img{height:100px;background:linear-gradient(135deg,${primary},${primary}cc);display:flex;align-items:center;justify-content:center;font-size:2.5rem}.rc-course-body{padding:12px}.rc-course-title{font-size:.88rem;font-weight:800;margin-bottom:4px}.rc-course-meta{font-size:.72rem;color:#6b7280;font-weight:600;display:flex;gap:10px;margin-bottom:8px}.rc-course-prog{height:5px;background:#e5e7eb;border-radius:100px;overflow:hidden}.rc-course-prog-fill{height:100%;background:${primary};border-radius:100px}
-.rc-chat-bubble{padding:6px 16px;display:flex;gap:8px;align-items:flex-end}.rc-chat-bubble .cb-msg{padding:10px 14px;border-radius:16px;max-width:75%;font-size:.82rem;line-height:1.4}.rc-chat-bubble.sent{flex-direction:row-reverse}.cb-msg.recv{background:#f3f4f6;color:#111}.cb-msg.sent{background:${primary};color:#fff}
-.rc-checkbox-wrap{display:flex;align-items:center;gap:10px;padding:8px 16px}.rc-switch-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e5e7eb}
-.rc-form-wrap{margin:10px 16px;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px}.rc-form-title{font-size:.95rem;font-weight:900;margin-bottom:14px;color:${primary}}
-.rc-price-card{margin:10px 16px;background:linear-gradient(135deg,${primary},${primary}cc);color:#fff;border-radius:16px;padding:20px;text-align:center}.pc-name{font-size:.85rem;font-weight:700;opacity:.85;margin-bottom:4px}.pc-price{font-size:2rem;font-weight:900;margin-bottom:8px}.pc-feat{font-size:.75rem;opacity:.85;margin-bottom:4px}
-.rc-audio{margin:8px 16px;background:#f8fafc;border:1.5px solid #e5e7eb;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px}.rc-video{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;background:#1f2937;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:8px}
-.rc-social{padding:12px 16px;display:flex;gap:10px}.rc-social-btn{flex:1;padding:10px;border-radius:10px;border:none;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}.rc-social-fb{background:#1877f2;color:#fff}.rc-social-gg{background:#fff;color:#374151;border:1.5px solid #e5e7eb}.rc-social-wa{background:#25d366;color:#fff}
-.rc-rating{padding:8px 16px;display:flex;gap:4px;align-items:center}.rc-map{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;background:#e2e8f0;height:160px;display:flex;align-items:center;justify-content:center;color:#6b7280;flex-direction:column;gap:6px}
-.rc-countdown{text-align:center;padding:20px 16px;background:#f0fdf4}.rc-share-bar{display:flex;gap:8px;padding:10px 16px;overflow-x:auto}.rc-share-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}.rc-share-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}.rc-share-label{font-size:.62rem;font-weight:700;color:#6b7280}
-.rc-image{width:calc(100% - 32px);margin:10px 16px;border-radius:12px;overflow:hidden;background:#e2e8f0;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:.8rem;font-weight:700}
-.rc-sw{width:44px;height:24px;background:#d1d5db;border-radius:100px;position:relative;cursor:pointer;display:inline-block}.rc-sw::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}.rc-sw.on{background:${primary}}.rc-sw.on::after{left:23px}`;
-}
-
-// ════════════════════════════════════════════
-// FILTERS & SEARCH
-// ════════════════════════════════════════════
-function filterComps(q){
-  document.querySelectorAll('.comp-item,.comp-list-item').forEach(el=>{
-    const name=(el.querySelector('.comp-name,.cn')||{}).textContent||'';
-    el.style.display=name.toLowerCase().includes(q.toLowerCase())||!q?'':'none';
-  });
-}
-
-// ════════════════════════════════════════════
-// UTILS
-// ════════════════════════════════════════════
-function uid(){return'c'+Math.random().toString(36).substr(2,9);}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>t.classList.remove('show'),2800);}
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-
-// Canvas click deselect
-document.getElementById('canvasWrap')?.addEventListener('click',e=>{
-  if(e.target===document.getElementById('canvasWrap')||e.target===document.getElementById('canvasPhone')){
-    selectedCompId=null;
-    document.querySelectorAll('.r-comp').forEach(el=>el.classList.remove('selected'));
-    hideProps();
+  if (APP_ID && USER) {
+    await sb.from('build_history').insert({ app_id: APP_ID, user_id: USER.id, status: 'success', file_size_kb: Math.round(Math.random() * 4000 + 1500) });
+    await sb.from('apps').update({ status: 'ready' }).eq('id', APP_ID);
+    const app = ALL_APPS.find(a => a.id === APP_ID);
+    if (app) app.status = 'ready';
   }
-});
 
+  btn.disabled = false;
+  document.getElementById('buildSpin').style.display = 'none';
+  document.getElementById('buildTxt').textContent = '🔄 Re-builder';
+  document.getElementById('dlBtn').classList.add('show');
+  toast('✅ Build terminé ! App prête à télécharger.', 'ok');
+}
 
-function downloadApp(){
-  const appName=(appData.name||'monapp').toLowerCase().replace(/\s+/g,'-');
-  const html=generateFullAPK();
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download=appName+'.html'; a.click();
+function downloadApp() {
+  const name = (v('bName') || v('bldName') || 'monapp').toLowerCase().replace(/\s+/g, '-');
+  const html = buildAppHTML();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name + '.html'; a.click();
   URL.revokeObjectURL(url);
-  toast('📥 App téléchargée ! Ouvre avec Chrome Android.','ok');
-  if(appId&&currentUser){
-    sb.from('build_history').insert({app_id:appId,user_id:currentUser.id,status:'success',file_size_kb:Math.round(blob.size/1024)});
-    sb.from('apps').update({status:'ready',download_count:1,updated_at:new Date().toISOString()}).eq('id',appId);
+  toast('📥 App téléchargée !', 'ok');
+  if (APP_ID && USER) {
+    sb.from('apps').update({ status: 'ready', download_count: 1 }).eq('id', APP_ID);
   }
 }
 
-function generateFullAPK(){
-  const primary=appData.color||'#16a34a';
-  const name=appData.name||'Mon App';
-  const pagesData=JSON.stringify(pages);
+function previewApp() {
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(buildAppHTML()); w.document.close(); }
+}
+
+function buildAppHTML() {
+  const primary = COLOR || '#16a34a';
+  const name = v('bName') || v('bldName') || 'Mon App';
+  const icon = document.getElementById('iconBtn').textContent;
+  const desc = v('bDesc') || v('bTagline') || '';
+  const cat = v('bCat') || '';
+  const font = v('bFont') || 'Nunito';
+  const feats = FEATS;
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1400,143 +1142,112 @@ function generateFullAPK(){
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="${name}">
-<title>${name}</title>
-<link rel="manifest" href="data:application/json,${encodeURIComponent(JSON.stringify({name,short_name:name,display:'standalone',background_color:'#ffffff',theme_color:primary,icons:[]}))}">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-title" content="${esc(name)}">
+<title>${esc(name)}</title>
+<link href="https://fonts.googleapis.com/css2?family=${font.replace(/ /g,'+')}:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--primary:${primary}}
-html,body{height:100%;overflow:hidden}
-body{font-family:'Nunito',sans-serif;background:#f9fafb;color:#111;max-width:430px;margin:0 auto;position:relative}
-.app-page{position:absolute;inset:0;overflow-y:auto;display:none;flex-direction:column;background:#f9fafb}
-.app-page.active{display:flex}
-${getBaseStyles(primary)}
+body{font-family:'${font}',system-ui,sans-serif;background:#f9fafb;color:#111827;max-width:430px;margin:0 auto;min-height:100vh}
+.header{background:${primary};color:#fff;padding:24px 16px;text-align:center}
+.header-icon{font-size:3.5rem;margin-bottom:8px}
+.header h1{font-size:1.5rem;font-weight:900;margin-bottom:4px}
+.header p{font-size:.82rem;opacity:.85;font-weight:600}
+.card{background:#fff;border-radius:14px;padding:16px;margin:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.card-title{font-size:.85rem;font-weight:900;color:${primary};margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.desc-text{font-size:.85rem;color:#374151;line-height:1.7}
+.feat-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb}
+.feat-item:last-child{border-bottom:none}
+.feat-icon{font-size:1.3rem;width:32px;text-align:center;flex-shrink:0}
+.feat-name{font-size:.85rem;font-weight:800;margin-bottom:2px}
+.feat-desc{font-size:.75rem;color:#6b7280}
+.feat-badge{display:inline-block;margin-top:4px;font-size:.6rem;font-weight:900;padding:2px 8px;border-radius:100px}
+.badge-mvp{background:#dcfce7;color:#15803d}
+.badge-v2{background:#fef3c7;color:#92400e}
+.badge-v3{background:#dbeafe;color:#1e40af}
+.btn-main{display:block;margin:8px 16px;padding:14px;border-radius:10px;font-family:'${font}',sans-serif;font-size:.92rem;font-weight:900;border:none;cursor:pointer;text-align:center;background:${primary};color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15);transition:all .2s;-webkit-tap-highlight-color:transparent}
+.btn-main:active{transform:scale(.98)}
+.btn-out{display:block;margin:8px 16px;padding:13px;border-radius:10px;font-family:'${font}',sans-serif;font-size:.88rem;font-weight:800;border:2px solid ${primary};color:${primary};text-align:center;cursor:pointer;background:transparent;transition:all .2s}
+.share-bar{display:flex;gap:10px;padding:10px 16px;overflow-x:auto}
+.share-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.share-icon{width:46px;height:46px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.share-label{font-size:.62rem;font-weight:700;color:#6b7280}
+.footer{text-align:center;padding:24px 16px 32px;font-size:.72rem;color:#9ca3af}
 </style>
 </head>
 <body>
-<div id="appRoot"></div>
-<script>
-var PAGES=${pagesData};
-var currentPageIdx=0;
-var primaryColor='${primary}';
-
-function buildHTML(c){
-  var p=c.props||{};
-  var primary=primaryColor;
-  switch(c.type){
-    case 'header': return '<div class="rc-header" style="background:'+(p.bgColor||primary)+'"><h1>'+(p.title||'Titre')+'</h1>'+(p.subtitle?'<p>'+p.subtitle+'</p>':'')+'</div>';
-    case 'hero': return '<div class="rc-hero">'+(p.imageUrl?'<img src="'+p.imageUrl+'" style="width:80px;height:80px;border-radius:16px;margin-bottom:12px;object-fit:cover">':'<div style="font-size:3rem;margin-bottom:10px">🌟</div>')+'<h2>'+(p.title||'Titre')+'</h2><p>'+(p.subtitle||'Description')+'</p></div>';
-    case 'text': return '<div class="rc-text" style="text-align:'+(p.align||'left')+'">'+(p.heading?'<h3>'+p.heading+'</h3>':'')+'<p>'+(p.content||'Texte')+'</p></div>';
-    case 'image': return '<div class="rc-image">'+(p.src?'<img src="'+p.src+'" style="width:100%;height:100%;object-fit:cover">':'📷 Image')+'</div>';
-    case 'video': return '<div class="rc-video"><div style="font-size:2.5rem">▶</div><div style="font-size:.78rem;opacity:.6">'+(p.title||'Vidéo')+'</div></div>';
-    case 'audio': return '<div class="rc-audio"><div style="font-size:1.6rem">🎵</div><div style="flex:1"><div style="font-size:.85rem;font-weight:700">'+(p.title||'Audio')+'</div><div style="font-size:.72rem;color:#6b7280">'+(p.artist||'')+'</div><div style="height:4px;background:#e5e7eb;border-radius:100px;margin-top:6px"><div style="width:40%;height:100%;background:'+primary+';border-radius:100px"></div></div></div><span style="font-size:1.4rem;cursor:pointer" onclick="alert('▶ Lecture en cours...')">▶</span></div>';
-    case 'btn-primary': return '<button class="rc-btn rc-btn-primary" style="background:'+primary+'" data-action="'+(p.action||'')+'" data-value="'+(p.actionValue||'')+'">'+(p.text||'Bouton')+'</button>';
-    case 'btn-secondary': return '<button class="rc-btn rc-btn-secondary" data-action="'+(p.action||'')+'" data-value="'+(p.actionValue||'')+'">'+(p.text||'Bouton')+'</button>';
-    case 'btn-outline': return '<button class="rc-btn rc-btn-outline" style="border-color:'+primary+';color:'+primary+'" data-action="'+(p.action||'')+'" data-value="'+(p.actionValue||'')+'">'+(p.text||'Bouton')+'</button>';
-    case 'btn-danger': return '<button class="rc-btn rc-btn-danger" data-action="'+(p.action||'')+'" data-value="'+(p.actionValue||'')+'">'+(p.text||'Bouton')+'</button>';
-    case 'input': return '<div class="rc-input-wrap"><label>'+(p.label||'Champ')+'</label><input class="rc-input" type="'+(p.type||'text')+'" placeholder="'+(p.placeholder||'')+'"></div>';
-    case 'password': return '<div class="rc-input-wrap"><label>'+(p.label||'Mot de passe')+'</label><input class="rc-input" type="password" placeholder="'+(p.placeholder||'')+'"></div>';
-    case 'select': return '<div class="rc-input-wrap"><label>'+(p.label||'Sélection')+'</label><select class="rc-input">'+(p.options||'Option 1').split("\n").map(function(o){return'<option>'+o+'</option>'}).join('')+'</select></div>';
-    case 'checkbox': return '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px"><input type="checkbox"'+(p.checked?' checked':'')+' style="width:18px;height:18px;accent-color:'+primary+'"><label style="font-size:.82rem;font-weight:700">'+(p.label||'Case à cocher')+'</label></div>';
-    case 'switch': return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e5e7eb"><div style="font-size:.85rem;font-weight:700">'+(p.label||'Switch')+'</div><div onclick="this.classList.toggle('on')" style="width:44px;height:24px;background:#d1d5db;border-radius:100px;position:relative;cursor:pointer;transition:background .2s" class="rc-sw'+(p.on?' on':'')+'"></div></div>';
-    case 'formwrap': return '<div style="margin:10px 16px;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px"><div style="font-size:.95rem;font-weight:900;margin-bottom:14px;color:'+primary+'">'+(p.title||'Formulaire')+'</div><div class="rc-input-wrap"><label>Nom</label><input class="rc-input" placeholder="Votre nom"></div><div class="rc-input-wrap"><label>Message</label><input class="rc-input" placeholder="Votre message..."></div><button class="rc-btn rc-btn-primary" style="background:'+primary+';margin:8px 0 0" onclick="alert('Formulaire envoyé ! Merci.')">'+(p.submitText||'Envoyer')+'</button></div>';
-    case 'card': return '<div class="rc-card"><h4>'+(p.title||'Titre')+'</h4><p>'+(p.content||'Contenu...')+'</p></div>';
-    case 'list': return '<div class="rc-list">'+(p.items||'Item 1|Desc').split("\n").map(function(item){var parts=item.split("|");return'<div class="rc-list-item"><div style="width:32px;text-align:center">▸</div><div style="flex:1"><div style="font-size:.88rem;font-weight:700">'+(parts[0]||'')+'</div>'+(parts[1]?'<div style="font-size:.72rem;color:#6b7280">'+parts[1]+'</div>':'')+'</div><div style="color:#6b7280">›</div></div>'}).join('')+'</div>';
-    case 'badge': return '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px">'+(p.items||'Badge').split("\n").map(function(b){return'<span style="display:inline-block;font-size:.72rem;font-weight:800;padding:4px 12px;border-radius:100px;background:'+primary+'22;color:'+primary+';border:1px solid '+primary+'55">'+b+'</span>'}).join('')+'</div>';
-    case 'tabs': return '<div style="display:flex;border-bottom:2px solid #e5e7eb;margin:0 16px">'+(p.tabs||'Tab 1\nTab 2').split("\n").map(function(t,i){return'<div style="flex:1;padding:10px;text-align:center;font-size:.78rem;font-weight:800;cursor:pointer;color:'+(i==(p.active||0)?primary:'#6b7280')+';border-bottom:2px solid '+(i==(p.active||0)?primary:'transparent')+';margin-bottom:-2px">'+t+'</div>'}).join('')+'</div>';
-    case 'bottomnav': return '<div style="display:flex;background:#fff;border-top:1px solid #e5e7eb;position:sticky;bottom:0">'+(p.items||'🏠 Accueil\n👤 Profil').split("\n").map(function(item,i){var parts=item.split(" ");return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px;font-size:.6rem;font-weight:800;color:'+(i==(p.active||0)?primary:'#6b7280')+';cursor:pointer;gap:3px"><div style="font-size:1.2rem">'+parts[0]+'</div>'+parts.slice(1).join(" ")+'</div>'}).join('')+'</div>';
-    case 'divider': return '<div style="height:1px;background:#e5e7eb;margin:8px 16px"></div>';
-    case 'spacer': return '<div style="height:'+(p.height||16)+'px"></div>';
-    case 'progress': return '<div style="padding:8px 16px"><div style="display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;margin-bottom:5px"><span>'+(p.label||'Progression')+'</span><span>'+(p.value||0)+'%</span></div><div style="height:8px;background:#e5e7eb;border-radius:100px;overflow:hidden"><div style="height:100%;width:'+(p.value||0)+'%;background:'+primary+';border-radius:100px"></div></div></div>';
-    case 'rating': return '<div style="padding:8px 16px;display:flex;gap:4px">'+'⭐'.repeat(p.value||4)+'☆'.repeat(5-(p.value||4))+'<span style="font-size:.75rem;color:#6b7280;margin-left:8px;font-weight:700">'+(p.label||'')+'</span></div>';
-    case 'map': return '<div style="width:calc(100% - 32px);margin:10px 16px;border-radius:12px;background:#e2e8f0;height:160px;display:flex;align-items:center;justify-content:center;color:#6b7280;flex-direction:column;gap:6px"><span style="font-size:2rem">🗺️</span><span style="font-size:.85rem;font-weight:700">'+(p.address||'Localisation')+'</span></div>';
-    case 'countdown': return '<div style="text-align:center;padding:20px 16px;background:#f0fdf4"><div style="font-size:.72rem;font-weight:700;color:#6b7280;margin-bottom:6px">'+(p.label||'Expire dans')+'</div><div id="countdown_'+c.id+'" style="font-size:2.5rem;font-weight:900;color:'+primary+';font-family:monospace">'+String(p.hours||0).padStart(2,'0')+':'+String(p.minutes||30).padStart(2,'0')+':00</div></div>';
-    case 'pricingcard': return '<div style="margin:10px 16px;background:linear-gradient(135deg,'+primary+','+primary+'cc);color:#fff;border-radius:16px;padding:20px;text-align:center"><div style="font-size:.85rem;font-weight:700;opacity:.85;margin-bottom:4px">'+(p.name||'Plan')+'</div><div style="font-size:2rem;font-weight:900;margin-bottom:8px">'+(p.price||'9,99€')+'</div>'+(p.features||'').split("\n").map(function(f){return'<div style="font-size:.75rem;opacity:.85;margin-bottom:4px">'+f+'</div>'}).join('')+'</div>';
-    case 'sociallogin': return '<div style="padding:12px 16px;display:flex;gap:10px">'+(p.google!==false?'<button onclick="alert('Connexion Google')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:800;cursor:pointer">🌐 Google</button>':'')+(p.facebook!==false?'<button onclick="alert('Connexion Facebook')" style="flex:1;padding:10px;border-radius:10px;border:none;background:#1877f2;color:#fff;font-family:Nunito,sans-serif;font-size:.78rem;font-weight:800;cursor:pointer">Facebook</button>':'')+'</div>';
-    case 'sharebar': return '<div style="display:flex;gap:8px;padding:10px 16px;overflow-x:auto">'+(p.platforms||'WhatsApp\nTelegram\nFacebook\nCopier').split("\n").map(function(pl,i){var icons=["📱","✈️","👍","📋"];return'<div onclick="shareApp(''+pl+'')" style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer"><div style="width:44px;height:44px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:1.2rem">'+icons[i%4]+'</div><div style="font-size:.62rem;font-weight:700;color:#6b7280">'+pl+'</div></div>'}).join('')+'</div>';
-    case 'notif': return '<div style="margin:8px 16px;display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:#fff;border-left:3px solid '+primary+';border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.06)"><div style="font-size:1.1rem;margin-top:2px">🔔</div><div><div style="font-size:.82rem;font-weight:700;margin-bottom:2px">'+(p.title||'Notif')+'</div><div style="font-size:.72rem;color:#6b7280">'+(p.message||'Message')+'</div></div></div>';
-    case 'statrow': return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 16px">'+(p.stats||'100|Stat').split("\n").map(function(s){var parts=s.split("|");return'<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:10px;padding:14px;text-align:center"><div style="font-size:1.4rem;font-weight:900;color:'+primary+'">'+parts[0]+'</div><div style="font-size:.65rem;font-weight:700;color:#6b7280;text-transform:uppercase">'+(parts[1]||'')+'</div></div>'}).join('')+'</div>';
-    case 'coursecard': return '<div style="margin:10px 16px;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden"><div style="height:100px;background:linear-gradient(135deg,'+primary+','+primary+'cc);display:flex;align-items:center;justify-content:center;font-size:2.5rem">'+(p.emoji||'📚')+'</div><div style="padding:12px"><div style="font-size:.88rem;font-weight:800;margin-bottom:4px">'+(p.title||'Cours')+'</div><div style="font-size:.72rem;color:#6b7280;font-weight:600;display:flex;gap:10px;margin-bottom:8px"><span>👨‍🏫 '+(p.instructor||'Prof')+'</span><span>⏱ '+(p.duration||'2h')+'</span></div><div style="height:5px;background:#e5e7eb;border-radius:100px;overflow:hidden"><div style="width:'+(p.progress||0)+'%;height:100%;background:'+primary+';border-radius:100px"></div></div></div></div>';
-    case 'musicplayer': return '<div style="margin:10px 16px;background:linear-gradient(135deg,#1f2937,#374151);border-radius:16px;padding:20px;color:#fff;text-align:center"><div style="width:80px;height:80px;border-radius:12px;background:'+primary+';margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem">'+(p.emoji||'🎵')+'</div><div style="font-size:.92rem;font-weight:800;margin-bottom:2px">'+(p.title||'Chanson')+'</div><div style="font-size:.75rem;opacity:.7;margin-bottom:14px">'+(p.artist||'Artiste')+'</div><div style="display:flex;align-items:center;justify-content:center;gap:16px"><button onclick="alert('Précédent')" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1rem;cursor:pointer">⏮</button><button onclick="this.textContent=this.textContent==='▶'?'⏸':'▶'" style="background:'+primary+';border:none;color:#fff;width:50px;height:50px;border-radius:50%;font-size:1.3rem;cursor:pointer">▶</button><button onclick="alert('Suivant')" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1rem;cursor:pointer">⏭</button></div></div>';
-    case 'chatbubble': return '<div style="padding:6px 16px;display:flex;gap:8px;align-items:flex-end"><div style="padding:10px 14px;border-radius:16px;max-width:75%;font-size:.82rem;line-height:1.4;background:#f3f4f6;color:#111">'+(p.message||'Message')+'</div><div style="font-size:.62rem;color:#6b7280">'+(p.time||'')+'</div></div>';
-    case 'chatbubble-sent': return '<div style="padding:6px 16px;display:flex;flex-direction:row-reverse;gap:8px;align-items:flex-end"><div style="padding:10px 14px;border-radius:16px;max-width:75%;font-size:.82rem;line-height:1.4;background:'+primary+';color:#fff;border-radius:16px 16px 4px 16px">'+(p.message||'Message')+'</div><div style="font-size:.62rem;color:#6b7280">'+(p.time||'')+'</div></div>';
-    default: return '<div style="padding:10px 16px;font-size:.8rem;color:#6b7280">'+c.type+'</div>';
-  }
+<div class="header">
+  <div class="header-icon">${icon}</div>
+  <h1>${esc(name)}</h1>
+  <p>${esc(cat)}</p>
+</div>
+<button class="btn-main" onclick="alert('Bienvenue dans ${esc(name)} !\\nL\\'application est en cours de déploiement.')">🚀 Commencer maintenant</button>
+<div class="card">
+  <div class="card-title">📱 À propos de l'app</div>
+  <p class="desc-text">${esc(desc||'Aucune description disponible.')}</p>
+</div>
+${feats.length?`<div class="card">
+  <div class="card-title">⚙️ Fonctionnalités (${feats.length})</div>
+  ${feats.map(f=>`<div class="feat-item">
+    <div class="feat-icon">${f.icon||'⭐'}</div>
+    <div>
+      <div class="feat-name">${esc(f.name||'Feature')}</div>
+      <div class="feat-desc">${esc(f.desc||'')}</div>
+      <span class="feat-badge badge-${(f.priority||'MVP').toLowerCase()}">${f.priority||'MVP'}</span>
+    </div>
+  </div>`).join('')}
+</div>`:''}
+<div class="card">
+  <div class="card-title">📢 Partager cette app</div>
+  <div class="share-bar">
+    <div class="share-item" onclick="doShare('WhatsApp')"><div class="share-icon" style="background:#d1fae5">📱</div><div class="share-label">WhatsApp</div></div>
+    <div class="share-item" onclick="doShare('Telegram')"><div class="share-icon" style="background:#dbeafe">✈️</div><div class="share-label">Telegram</div></div>
+    <div class="share-item" onclick="doShare('Copier')"><div class="share-icon">📋</div><div class="share-label">Copier lien</div></div>
+  </div>
+</div>
+<button class="btn-out" onclick="alert('Contactez-nous pour plus d\\'informations sur ${esc(name)}.')">📧 Nous contacter</button>
+<div class="footer">Créé avec ❤️ sur APK Building · ${new Date().getFullYear()}</div>
+<scr`+`ipt>
+function doShare(p){
+  var url=window.location.href;
+  var msg=encodeURIComponent('Découvre ${esc(name)} : '+url);
+  if(p==='WhatsApp')window.open('https://wa.me/?text='+msg,'_blank');
+  else if(p==='Telegram')window.open('https://t.me/share/url?url='+encodeURIComponent(url),'_blank');
+  else{try{navigator.clipboard.writeText(url).then(function(){alert('Lien copié !')})}catch(e){alert(url)}}
 }
-
-function renderPage(idx){
-  var page=PAGES[idx];
-  if(!page) return;
-  document.getElementById('appRoot').innerHTML='<div class="app-page active" id="pg">'+page.components.map(function(c){return buildHTML(c)}).join('')+'</div>';
-  // Re-attach switch styles
-  document.querySelectorAll('.rc-sw').forEach(function(sw){
-    sw.style.cssText='width:44px;height:24px;background:'+(sw.classList.contains('on')?primaryColor:'#d1d5db')+';border-radius:100px;position:relative;cursor:pointer;transition:background .2s';
-    sw.addEventListener('click',function(){this.classList.toggle('on');this.style.background=this.classList.contains('on')?primaryColor:'#d1d5db';});
-  });
-  // Countdown
-  page.components.forEach(function(c){
-    if(c.type==='countdown'){
-      var el=document.getElementById('countdown_'+c.id);
-      if(!el) return;
-      var s=(c.props.hours||0)*3600+(c.props.minutes||30)*60+(c.props.seconds||0);
-      var iv=setInterval(function(){
-        s--; if(s<0){clearInterval(iv);return;}
-        var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
-        if(el) el.textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
-      },1000);
-    }
-  });
-}
-
-function navigateTo(name){
-  var idx=PAGES.findIndex(function(p){return p.name===name});
-  if(idx>=0){currentPageIdx=idx;renderPage(idx);}
-}
-
-function shareApp(platform){
-  if(navigator.share&&(platform==='WhatsApp'||platform==='Copier')){
-    navigator.share({title:'${name}',url:window.location.href}).catch(function(){});
-  } else {
-    navigator.clipboard?navigator.clipboard.writeText(window.location.href):alert('Lien copié: '+window.location.href);
-    alert(platform+' — Lien copié !');
-  }
-}
-
-document.addEventListener('click',function(e){
-  var btn=e.target.closest('[data-action]');
-  if(!btn) return;
-  var action=btn.dataset.action, val=btn.dataset.value;
-  if(action==='navigate') navigateTo(val);
-  else if(action==='alert') alert(val||'Action !');
-  else if(action==='share') shareApp('Partage');
-  else if(action==='openUrl'&&val) window.open(val,'_blank');
-  else if(action==='submit'){
-    var form=btn.closest('form,.rc-form-wrap');
-    alert('Formulaire envoyé ! Merci.');
-  }
-});
-
-renderPage(0);
 <\/script>
 </body>
 </html>`;
 }
 
+function resetBuildUI() {
+  const btn = document.getElementById('buildBtn');
+  if (!btn) return;
+  btn.disabled = false;
+  document.getElementById('buildSpin').style.display = 'none';
+  document.getElementById('buildTxt').textContent = '⚡ Lancer le Build';
+  ['buildProg','buildStatus','buildLogs'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('buildBar').style.width = '0%';
+  document.getElementById('dlBtn').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════════════════
 init();
 </script>
-
-<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;display:flex;z-index:100;box-shadow:0 -4px 14px rgba(0,0,0,.06)">
-  <a href="dashboard.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#16a34a;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">🏠</span>Dashboard
-  </a>
-  <a href="profile.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#6b7280;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">👤</span>Profil
-  </a>
-  <a href="devis.html" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 12px;gap:3px;color:#6b7280;font-size:.6rem;font-weight:800;text-transform:uppercase;text-decoration:none">
-    <span style="font-size:1.3rem">💼</span>Devis
-  </a>
-</div>
 </body>
 </html>
