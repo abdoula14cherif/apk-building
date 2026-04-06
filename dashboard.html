@@ -597,9 +597,34 @@ async function init() {
     USER = session.user;
 
     setLoadMsg('Chargement du profil...');
-    const { data: p, error: pErr } = await sb.from('profiles').select('*').eq('id', USER.id).single();
-    if (pErr && pErr.code !== 'PGRST116') throw new Error('Profil: ' + pErr.message);
+    let { data: p, error: pErr } = await sb.from('profiles').select('*').eq('id', USER.id).single();
+
+    // Profil manquant -> le créer automatiquement
+    if (!p || (pErr && pErr.code === 'PGRST116')) {
+      const meta = USER.user_metadata || {};
+      const { data: newP, error: cErr } = await sb.from('profiles').upsert({
+        id: USER.id,
+        email: USER.email || '',
+        full_name: meta.full_name || meta.name || '',
+        country: meta.country || '',
+        whatsapp: meta.whatsapp || '',
+        telegram: meta.telegram || '',
+        terms_accepted: meta.terms_accepted || false,
+        plan: 'free',
+        is_admin: false
+      }, { onConflict: 'id' }).select().single();
+      if (cErr) throw new Error('Création profil: ' + cErr.message);
+      p = newP;
+    } else if (pErr) {
+      throw new Error('Profil: ' + pErr.message);
+    }
     PROFILE = p;
+
+    // Définir l'admin si c'est le bon email
+    if (PROFILE && PROFILE.email === 'abdoula13cherif@gmail.com' && !PROFILE.is_admin) {
+      await sb.from('profiles').update({ is_admin: true }).eq('id', USER.id);
+      PROFILE.is_admin = true;
+    }
 
     if (PROFILE?.is_admin) {
       document.getElementById('adminLink').style.display = 'block';
@@ -645,7 +670,7 @@ async function loadDashboard() {
   const h = new Date().getHours();
   const greet = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   document.getElementById('heroGreet').textContent = greet + ' 👋';
-  document.getElementById('heroName').textContent = PROFILE?.full_name || 'Mon espace';
+  document.getElementById('heroName').textContent = PROFILE?.full_name || USER?.email?.split('@')[0] || 'Mon espace';
   document.getElementById('statPlan').textContent = (PROFILE?.plan || 'free').toUpperCase();
 
   const { data: apps, error } = await sb.from('apps')
@@ -718,6 +743,18 @@ function backHome() { saveApp(); switchHome(); }
 // ═══════════════════════════════════════════════════════
 async function startNewApp() {
   try {
+    // S'assurer que le profil existe avant d'insérer une app
+    if (!PROFILE) {
+      const meta = USER.user_metadata || {};
+      await sb.from('profiles').upsert({
+        id: USER.id, email: USER.email || '',
+        full_name: meta.full_name || '', country: meta.country || '',
+        whatsapp: meta.whatsapp || '', telegram: meta.telegram || '',
+        plan: 'free', is_admin: false
+      }, { onConflict: 'id' });
+      const { data: newP } = await sb.from('profiles').select('*').eq('id', USER.id).single();
+      PROFILE = newP;
+    }
     const { data, error } = await sb.from('apps').insert({
       user_id: USER.id, name: '', icon: '🚀',
       status: 'draft', app_color: '#16a34a', last_step: 0
