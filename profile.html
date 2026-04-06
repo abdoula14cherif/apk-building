@@ -234,11 +234,31 @@ async function init(){
   const{data:{session}}=await sb.auth.getSession();
   if(!session){window.location.href='auth.html';return;}
   currentUser=session.user;
-  const[{data:p},{data:apps}]=await Promise.all([
-    sb.from('profiles').select('*').eq('id',currentUser.id).single(),
-    sb.from('apps').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false})
-  ]);
-  profile=p; userApps=apps||[];
+
+  // Load profile - auto-create if missing
+  let{data:p,error:pErr}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  if(!p||(pErr&&pErr.code==='PGRST116')){
+    const meta=currentUser.user_metadata||{};
+    await sb.from('profiles').upsert({
+      id:currentUser.id,email:currentUser.email||'',
+      full_name:meta.full_name||meta.name||'',
+      country:meta.country||'',whatsapp:meta.whatsapp||'',
+      telegram:meta.telegram||'',plan:'free',is_admin:false,
+      terms_accepted:meta.terms_accepted||false
+    },{onConflict:'id'});
+    const{data:np}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+    p=np;
+  }
+  profile=p||{id:currentUser.id,email:currentUser.email||'',full_name:'',plan:'free'};
+
+  // Check admin
+  if(profile.email==='abdoula13cherif@gmail.com'&&!profile.is_admin){
+    await sb.from('profiles').update({is_admin:true}).eq('id',currentUser.id);
+    profile.is_admin=true;
+  }
+
+  const{data:apps}=await sb.from('apps').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  userApps=apps||[];
   renderProfile();
   loadNotifs();
   loadMyMessages();
