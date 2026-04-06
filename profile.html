@@ -285,7 +285,7 @@ function renderProfile(){
   document.getElementById('eCountry').value=profile.country||'';
   // Render apps
   document.getElementById('myAppsList').innerHTML=userApps.length?userApps.map(a=>`
-    <div class="app-mini" onclick="window.location.href='dashboard.html?app=${a.id}'">
+    <div class="app-mini" onclick="window.location.href='builder.html?app=${a.id}'">
       <div class="app-mini-icon">${a.icon||'📱'}</div>
       <div><div class="app-mini-name">${a.name||'Sans nom'}</div><div class="app-mini-cat">${a.category||'—'} · <span class="badge ${a.status==='ready'?'badge-green':'badge-gray'}">${a.status||'draft'}</span></div></div>
     </div>`).join(''):'<div style="text-align:center;padding:24px;color:var(--mu);font-size:.82rem">Aucune app créée</div>';
