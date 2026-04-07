@@ -649,7 +649,7 @@ async function loadDashboard() {
   document.getElementById('statPlan').textContent = (PROFILE?.plan || 'free').toUpperCase();
 
   const { data: apps, error } = await sb.from('apps')
-    .select('id,name,icon,category,app_color,status,last_step')
+    .select('id,name,icon,category,app_color,status')
     .eq('user_id', USER.id)
     .order('updated_at', { ascending: false });
 
@@ -692,12 +692,9 @@ function renderAppsList() {
 
 function calcProg(a) {
   let s = 0;
-  if (a.name) s += 15;
-  if (a.category) s += 10;
-  if ((a.last_step || 0) >= 1) s += 15;
-  if ((a.last_step || 0) >= 2) s += 20;
-  if ((a.last_step || 0) >= 3) s += 15;
-  if (a.status === 'ready') s += 25;
+  if (a.name) s += 20;
+  if (a.category) s += 20;
+  if (a.status === 'ready') s += 60;
   return Math.min(100, s);
 }
 
