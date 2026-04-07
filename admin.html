@@ -900,16 +900,28 @@ async function sendNotif() {
   const msg = document.getElementById('notif-msg').value.trim();
   const target = document.getElementById('notif-target').value;
   if (!title || !msg) { toast('Remplis le titre et le message', 'err'); return; }
-  const payload = { title, message: msg };
-  if (target === 'all') { payload.is_global = true; }
-  else { payload.target_user_id = target; payload.is_global = false; }
+
+  // Build payload — ne pas inclure target_user_id si global
+  let payload;
+  if (target === 'all') {
+    payload = { title, message: msg, is_global: true };
+  } else {
+    payload = { title, message: msg, is_global: false, target_user_id: target };
+  }
+
   const { error } = await sb.from('notifications').insert(payload);
-  if (error) { toast('Erreur: ' + error.message, 'err'); return; }
-  toast(`✅ Notification envoyée`, 'ok');
+  if (error) {
+    toast('Erreur: ' + error.message, 'err');
+    console.error('Notif error:', error);
+    return;
+  }
+  toast('✅ Notification envoyée !', 'ok');
   closeModal('notifModal');
+  document.getElementById('notif-title').value = '';
+  document.getElementById('notif-msg').value = '';
   const { data } = await sb.from('notifications').select('*').order('created_at', { ascending: false });
   D.notifs = data || [];
-  renderNotifs();
+  if (currentSection === 'notifs') renderNotifs();
 }
 
 // ═══════════════════════════════════════════
