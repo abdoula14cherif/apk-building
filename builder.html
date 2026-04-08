@@ -1010,27 +1010,39 @@ const LOGIC_TYPES = [
   {id:'call',icon:'📞',label:'Appeler un numéro',hasPage:false,placeholder:'+33600000000'},
   {id:'download',icon:'📥',label:'Télécharger un fichier',hasPage:false,placeholder:'https://fichier.pdf'},
 ];
+
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
 async function init() {
-  buildCompGroups();
-  buildTmplGrid();
-  buildLogicOptsGrid();
-  detectMobile();
-
   try {
-    const { data: { session } } = await sb.auth.getSession();
+    // Safe UI build — errors here won't block the app
+    try { buildCompGroups(); } catch(e) { console.warn('buildCompGroups:', e); }
+    try { buildTmplGrid(); } catch(e) { console.warn('buildTmplGrid:', e); }
+    try { buildLogicOptsGrid(); } catch(e) { console.warn('buildLogicOptsGrid:', e); }
+    try { detectMobile(); } catch(e) {}
+
+    // Auth
+    const { data: { session }, error: sErr } = await sb.auth.getSession();
+    if (sErr) throw sErr;
     if (!session) { window.location.href = 'auth.html'; return; }
     USER = session.user;
+
+    // Load app or default
     APP_ID = new URLSearchParams(window.location.search).get('app');
-    if (APP_ID) await loadApp();
-    else initDefault();
+    if (APP_ID) {
+      try { await loadApp(); } catch(e) { console.error('loadApp:', e); initDefault(); }
+    } else {
+      initDefault();
+    }
   } catch(e) {
-    console.error(e);
-    initDefault(); // fallback
+    console.error('init error:', e);
+    try { initDefault(); } catch(e2) {}
+  } finally {
+    // TOUJOURS cacher le loading — quoi qu'il arrive
+    const ls = document.getElementById('LS');
+    if (ls) ls.style.display = 'none';
   }
-  document.getElementById('LS').style.display = 'none';
 }
 
 function initDefault() {
@@ -1040,17 +1052,32 @@ function initDefault() {
 }
 
 async function loadApp() {
-  const { data: a } = await sb.from('apps').select('*').eq('id', APP_ID).single();
-  if (!a) { initDefault(); return; }
-  document.getElementById('tbAppName').value = a.name || '';
-  APP_COLOR = a.app_color || '#16a34a';
-  document.getElementById('canvasPhone').style.setProperty('--app-primary', APP_COLOR);
+  const { data: a, error: aErr } = await sb.from('apps').select('*').eq('id', APP_ID).single();
+  if (aErr || !a) { console.warn('App not found, using default'); initDefault(); return; }
+
+  // Load name & color safely
+  try { document.getElementById('tbAppName').value = a.name || ''; } catch(e) {}
   try {
-    const parsed = typeof a.features_json === 'string' ? JSON.parse(a.features_json) : a.features_json;
-    if (Array.isArray(parsed) && parsed.length && parsed[0].name) pages = parsed;
-    else if (parsed?.pages) pages = parsed.pages;
-    else initDefault();
-  } catch { initDefault(); }
+    APP_COLOR = a.app_color || '#16a34a';
+    document.getElementById('canvasPhone').style.setProperty('--app-primary', APP_COLOR);
+  } catch(e) {}
+
+  // Load pages from features_json
+  let loaded = false;
+  try {
+    const raw = a.features_json;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    // Valid pages array: array of objects with 'name' property
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0] && parsed[0].name) {
+      pages = parsed;
+      loaded = true;
+    }
+  } catch(e) { console.warn('features_json parse error:', e); }
+
+  if (!loaded) {
+    pages = [{ id: uid(), name: 'Accueil', components: [] }];
+  }
+  currentPage = 0;
   renderAll();
 }
 
@@ -1091,8 +1118,10 @@ function filterTmplCat(catId) {
   renderTmplGrid(catId);
 }
 function renderTmplGrid(catId) {
+  const el = document.getElementById('tmplGrid');
+  if (!el) return;
   const filtered = catId==='all' ? TMPL_LIST : TMPL_LIST.filter(t=>t.cat===catId);
-  document.getElementById('tmplGrid').innerHTML = filtered.map(t=>`
+  el.innerHTML = filtered.map(t=>`
     <div onclick="selTmpl('${t.id}',this)" data-tmpl="${t.id}" style="border:2px solid ${selectedTemplate===t.id?'var(--g)':'var(--bd)'};background:${selectedTemplate===t.id?'var(--gp)':'#fff'};border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s;position:relative">
       <div style="width:40px;height:40px;border-radius:10px;background:${t.color||'#16a34a'}22;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 8px">${t.icon}</div>
       <div style="font-size:.72rem;font-weight:900;color:var(--t);margin-bottom:3px">${t.name}</div>
@@ -1121,10 +1150,10 @@ function buildLogicOptsGrid() {
 // RENDER
 // ══════════════════════════════════════════════════════════
 function renderAll() {
-  renderPageTabs();
-  renderPageSidebar();
-  renderCanvas();
-  renderRightPanel();
+  try { renderPageTabs(); } catch(e) { console.warn('renderPageTabs:', e); }
+  try { renderPageSidebar(); } catch(e) { console.warn('renderPageSidebar:', e); }
+  try { renderCanvas(); } catch(e) { console.warn('renderCanvas:', e); }
+  try { renderRightPanel(); } catch(e) { console.warn('renderRightPanel:', e); }
 }
 
 function renderPageTabs() {
