@@ -364,17 +364,29 @@ html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;color:var(
 <div class="toast" id="toast"></div>
 <div class="mob-overlay" id="mobOverlay" onclick="closeAllPanels()"></div>
 
-<!-- ══ MODAL: Add page ══ -->
-<div class="modal-o" id="pageModal">
-  <div class="modal">
-    <h3>➕ Nouvelle page</h3>
-    <p>Choisis un nom et un template pour ta page.</p>
-    <div class="modal-field"><label>Nom de la page</label><input id="newPageName" placeholder="Ex: Accueil, Profil, Cours..."></div>
-    <div class="modal-field"><label>Template</label>
-      <div class="tmpl-grid" id="tmplGrid"></div>
+<!-- ══ MODAL: Template Gallery ══ -->
+<div class="modal-o" id="pageModal" style="align-items:center;padding:0">
+  <div style="background:#fff;width:100%;max-width:640px;height:100vh;max-height:100vh;display:flex;flex-direction:column;border-radius:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <!-- HEADER -->
+    <div style="padding:16px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--g)">
+      <button onclick="closeModal('pageModal')" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center">←</button>
+      <div style="flex:1">
+        <div style="font-size:.95rem;font-weight:900;color:#fff">Choisir un template</div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.8);font-weight:600">30+ templates prêts à personnaliser</div>
+      </div>
+      <div class="modal-field" style="margin:0">
+        <input id="newPageName" placeholder="Nom de la page..." style="border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700;outline:none;width:160px">
+      </div>
     </div>
-    <div class="modal-btns">
-      <button class="mbtn mbtn-g" onclick="doAddPage()">Créer</button>
+    <!-- CATEGORY TABS -->
+    <div style="display:flex;overflow-x:auto;border-bottom:1px solid var(--bd);background:#fafafa;flex-shrink:0;-webkit-overflow-scrolling:touch" id="tmplCatTabs"></div>
+    <!-- TEMPLATE GRID -->
+    <div style="flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch">
+      <div id="tmplGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px"></div>
+    </div>
+    <!-- FOOTER -->
+    <div style="padding:12px 18px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0;background:#fff">
+      <button class="mbtn mbtn-g" onclick="doAddPage()" style="flex:1;padding:12px">✨ Créer avec ce template</button>
       <button class="mbtn mbtn-w" onclick="closeModal('pageModal')">Annuler</button>
     </div>
   </div>
@@ -518,6 +530,7 @@ let zoomLevel = 1;
 let rpTab = 'props';
 let lpTab = 'comps';
 let selectedTemplate = 'blank';
+let currentTmplCat = 'all';
 let logicAction = null;
 let saveTimer = null;
 let appFeatures = { auth:true, db:false, push:false, geo:false, camera:false, payment:false };
@@ -594,92 +607,390 @@ const COMP_GROUPS = [
 // ══════════════════════════════════════════════════════════
 const TEMPLATES = {
   blank: [],
-  login: [
-    {type:'header',props:{title:'Connexion',subtitle:'Bienvenue !'}},
-    {type:'spacer',props:{height:20}},
-    {type:'input-email',props:{label:'Email',placeholder:'votre@email.com'}},
-    {type:'input-password',props:{label:'Mot de passe',placeholder:'••••••••'}},
-    {type:'btn-primary',props:{text:'Se connecter',action:'navigate',actionVal:''}},
-    {type:'divider',props:{}},
-    {type:'social-login',props:{google:true,facebook:true,whatsapp:false}},
-    {type:'text',props:{content:'Pas de compte ? <b>S\'inscrire</b>',align:'center'}},
-  ],
+
   home: [
-    {type:'header',props:{title:'Mon App',subtitle:''}},
-    {type:'hero',props:{emoji:'🌟',title:'Bienvenue !',subtitle:'Découvrez notre application'}},
-    {type:'statrow',props:{stats:'1.2K|Utilisateurs\n4.8|Note\n98%|Satisfaction'}},
-    {type:'card',props:{title:'📢 Nouveauté',content:'Découvrez les nouvelles fonctionnalités.'}},
-    {type:'list',props:{items:'Accueil|Page principale\nProfil|Mes informations\nParamètres|Configuration'}},
+    {type:'header',props:{title:'Mon Application',subtitle:'Bienvenue !'}},
+    {type:'hero',props:{emoji:'🌟',title:'Découvrez notre app',subtitle:'Tout ce dont vous avez besoin, au bout des doigts.'}},
+    {type:'statrow',props:{stats:'10K|Utilisateurs\n4.9|Note\n100%|Gratuit'}},
+    {type:'badge-row',props:{items:'Nouveau\nPopulaire\n#1 App'}},
+    {type:'card',props:{title:'🔥 Fonctionnalité phare',content:'Découvrez notre fonctionnalité principale qui va transformer votre quotidien.'}},
+    {type:'card',props:{title:'⚡ Rapide & Fiable',content:'Performances optimales, disponible 24h/24 et 7j/7.'}},
+    {type:'btn-primary',props:{text:'Commencer maintenant'}},
+    {type:'share-bar',props:{platforms:'WhatsApp\nTelegram\nFacebook\nCopier'}},
     {type:'bnav',props:{items:'🏠 Accueil\n🔍 Explorer\n❤️ Favoris\n👤 Profil',active:0}},
   ],
-  shop: [
-    {type:'header',props:{title:'Boutique',subtitle:''}},
-    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher un produit...'}},
-    {type:'badge-row',props:{items:'Nouveautés\nPromo\nTop ventes'}},
-    {type:'card',props:{title:'Produit Premium',content:'Description du produit avec toutes ses caractéristiques.'}},
-    {type:'pricing-card',props:{name:'Offre Spéciale',price:'29,99€',features:'✓ Livraison offerte\n✓ Retour 30 jours\n✓ Garantie 2 ans'}},
-    {type:'btn-primary',props:{text:'Ajouter au panier',action:'alert',actionVal:'Ajouté au panier !'}},
-    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Chercher\n❤️ Favoris\n🛒 Panier',active:0}},
+  landing: [
+    {type:'hero',props:{emoji:'🚀',title:'La solution qui change tout',subtitle:'Rejoignez des milliers d\'utilisateurs satisfaits.'}},
+    {type:'statrow',props:{stats:'50K+|Clients\n4.8★|Note\n98%|Satisfaits'}},
+    {type:'text',props:{heading:'Pourquoi nous choisir ?',content:'Simple, puissante et efficace pour tous vos besoins.',align:'center'}},
+    {type:'card',props:{title:'✅ Facile à utiliser',content:'Interface intuitive, prise en main en quelques minutes.'}},
+    {type:'card',props:{title:'🔒 Sécurisé',content:'Vos données sont protégées et chiffrées de bout en bout.'}},
+    {type:'card',props:{title:'🌍 Disponible partout',content:'Android, iOS, Web — utilisez notre app sur tous vos appareils.'}},
+    {type:'pricing-card',props:{name:'Offre de lancement',price:'Gratuit',features:'Accès complet\nSupport 24/7\nMises à jour incluses'}},
+    {type:'btn-primary',props:{text:'Démarrer gratuitement'}},
+    {type:'testimonial',props:{quote:'Cette application a révolutionné ma façon de travailler !',author:'Marie L.',rating:5}},
+  ],
+  about: [
+    {type:'header',props:{title:'À propos',subtitle:'Notre histoire'}},
+    {type:'hero',props:{emoji:'🏢',title:'Qui sommes-nous ?',subtitle:'Une équipe passionnée qui croit en la puissance de la technologie.'}},
+    {type:'text',props:{heading:'Notre mission',content:'Nous créons des solutions technologiques accessibles à tous.',align:'left'}},
+    {type:'statrow',props:{stats:'2019|Fondé\n50+|Équipe\n120+|Pays'}},
+    {type:'card',props:{title:'🎯 Notre vision',content:'Un monde où chaque personne a accès aux meilleurs outils numériques.'}},
+    {type:'list',props:{items:'🌱 Fondation|2019, Paris\n🚀 Lancement|500 beta users\n📈 Croissance|50K utilisateurs\n🌍 International|120 pays'}},
+    {type:'btn-outline',props:{text:'Rejoindre l\'équipe'}},
+    {type:'bnav',props:{items:'🏠 Accueil\nℹ️ À propos\n📧 Contact\n👤 Profil',active:1}},
+  ],
+  faq: [
+    {type:'header',props:{title:'FAQ',subtitle:'Questions fréquentes'}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher une question...'}},
+    {type:'accordion',props:{items:'Comment créer un compte ?|Téléchargez l\'application, cliquez sur S\'inscrire et suivez les étapes.\nComment réinitialiser mon mot de passe ?|Cliquez sur Mot de passe oublié sur la page de connexion.\nL\'application est-elle gratuite ?|Oui, la version de base est entièrement gratuite.\nComment contacter le support ?|Via le chat, par email ou notre page contact.'}},
+    {type:'card',props:{title:'📧 Vous n\'avez pas trouvé ?',content:'Notre équipe support est disponible 7j/7.'}},
+    {type:'btn-primary',props:{text:'Contacter le support',action:'email',actionVal:'support@app.com'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n❓ FAQ\n📧 Contact\n👤 Profil',active:1}},
+  ],
+  settings: [
+    {type:'header',props:{title:'Paramètres',subtitle:''}},
+    {type:'list',props:{items:'👤 Compte|Modifier le profil\n🔔 Notifications|Gérer les alertes\n🔒 Confidentialité|Données et sécurité\n🌍 Langue|Français'}},
+    {type:'switch-row',props:{label:'Notifications push',on:true}},
+    {type:'switch-row',props:{label:'Emails promotionnels',on:false}},
+    {type:'switch-row',props:{label:'Mode sombre',on:false}},
+    {type:'divider',props:{}},
+    {type:'list',props:{items:'📋 Conditions d\'utilisation|\n🛡️ Politique de confidentialité|\n⭐ Noter l\'app|\n📤 Partager l\'app|'}},
+    {type:'btn-danger',props:{text:'Se déconnecter',action:'alert',actionVal:'Deconnexion reussie !'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n📊 Stats\n🔔 Notifs\n⚙️ Params',active:3}},
+  ],
+  login: [
+    {type:'hero',props:{emoji:'🔐',title:'Bon retour !',subtitle:'Connectez-vous pour continuer'}},
+    {type:'input-email',props:{label:'Adresse email',placeholder:'votre@email.com'}},
+    {type:'input-password',props:{label:'Mot de passe',placeholder:'••••••••'}},
+    {type:'btn-primary',props:{text:'Se connecter'}},
+    {type:'text',props:{content:'Mot de passe oublie ?',align:'right'}},
+    {type:'divider',props:{}},
+    {type:'social-login',props:{google:true,facebook:true,whatsapp:false}},
+    {type:'btn-outline',props:{text:'Creer un compte'}},
+  ],
+  register: [
+    {type:'hero',props:{emoji:'📝',title:'Creer un compte',subtitle:'Rejoignez notre communaute gratuitement'}},
+    {type:'input-text',props:{label:'Nom complet',placeholder:'Jean Dupont',required:true}},
+    {type:'input-email',props:{label:'Email',placeholder:'jean@exemple.com',required:true}},
+    {type:'input-password',props:{label:'Mot de passe',placeholder:'Min. 8 caracteres',required:true}},
+    {type:'input-phone',props:{label:'Telephone (optionnel)',placeholder:'+33 6 00 00 00 00'}},
+    {type:'checkbox',props:{label:'J\'accepte les conditions d\'utilisation',checked:false}},
+    {type:'btn-primary',props:{text:'Creer mon compte'}},
+    {type:'text',props:{content:'Deja un compte ? Se connecter',align:'center'}},
+  ],
+  forgot: [
+    {type:'hero',props:{emoji:'🔑',title:'Mot de passe oublie',subtitle:'Entrez votre email pour recevoir un lien de reinitialisation'}},
+    {type:'input-email',props:{label:'Votre adresse email',placeholder:'votre@email.com',required:true}},
+    {type:'btn-primary',props:{text:'Envoyer le lien',action:'alert',actionVal:'Email envoye ! Verifiez votre boite mail.'}},
+    {type:'btn-outline',props:{text:'Retour a la connexion'}},
+  ],
+  onboarding: [
+    {type:'hero',props:{emoji:'👋',title:'Bienvenue !',subtitle:'Votre compte est cree. Configurons votre experience.'}},
+    {type:'progress',props:{label:'Etape 1 sur 3',value:33}},
+    {type:'card',props:{title:'📍 Votre localisation',content:'Permettez-nous d\'acceder a votre position pour personnaliser votre experience.'}},
+    {type:'btn-primary',props:{text:'Autoriser la localisation',action:'alert',actionVal:'Localisation activee !'}},
+    {type:'btn-secondary',props:{text:'Passer cette etape'}},
   ],
   profile: [
     {type:'hero',props:{emoji:'👤',title:'Jean Dupont',subtitle:'Membre depuis 2024'}},
-    {type:'statrow',props:{stats:'142|Abonnés\n89|Suivis\n24|Posts'}},
-    {type:'list',props:{items:'Mes publications|20 articles\nMes favoris|14 éléments\nParamètres|Compte'}},
-    {type:'btn-outline',props:{text:'Modifier le profil',action:''}},
-    {type:'btn-danger',props:{text:'Se déconnecter',action:'alert',actionVal:'À bientôt !'}},
+    {type:'statrow',props:{stats:'142|Abonnes\n89|Suivis\n24|Posts'}},
+    {type:'list',props:{items:'Mes publications|20 articles\nMes favoris|14 elements\nParametres|Compte'}},
+    {type:'btn-outline',props:{text:'Modifier le profil'}},
+    {type:'btn-danger',props:{text:'Se deconnecter',action:'alert',actionVal:'A bientot !'}},
     {type:'bnav',props:{items:'🏠 Accueil\n🔍 Explorer\n❤️ Favoris\n👤 Profil',active:3}},
   ],
   chat: [
     {type:'header',props:{title:'Messages',subtitle:'En ligne'}},
     {type:'chat-recv',props:{message:'Bonjour ! Comment puis-je vous aider ?',time:'14:30'}},
     {type:'chat-sent',props:{message:'Bonjour, j\'ai une question.',time:'14:31'}},
-    {type:'chat-recv',props:{message:'Bien sûr, je vous écoute !',time:'14:32'}},
-    {type:'input-text',props:{label:'',placeholder:'Écrire un message...'}},
-    {type:'btn-primary',props:{text:'Envoyer',action:'alert',actionVal:'Message envoyé !'}},
+    {type:'chat-recv',props:{message:'Bien sur, je vous ecoute !',time:'14:32'}},
+    {type:'chat-sent',props:{message:'Merci pour votre aide.',time:'14:33'}},
+    {type:'input-text',props:{label:'',placeholder:'Ecrire un message...'}},
+    {type:'btn-primary',props:{text:'Envoyer',action:'alert',actionVal:'Message envoye !'}},
   ],
-  course: [
-    {type:'header',props:{title:'Mes Cours',subtitle:''}},
-    {type:'statrow',props:{stats:'12|Cours\n8|Terminés\n94%|Score'}},
-    {type:'course-card',props:{emoji:'🎨',title:'Design UX/UI',instructor:'Marie Martin',duration:'6h',progress:65}},
-    {type:'course-card',props:{emoji:'💻',title:'React Native',instructor:'Jean Dupont',duration:'12h',progress:30}},
-    {type:'progress',props:{label:'Objectif semaine',value:72,color:''}},
-    {type:'bnav',props:{items:'🏠 Accueil\n📚 Cours\n🏆 Progrès\n👤 Profil',active:1}},
+  feed: [
+    {type:'header',props:{title:'Actualites',subtitle:''}},
+    {type:'tabs',props:{tabs:'Tout\nTendances\nSuivis',active:0}},
+    {type:'card',props:{title:'🔥 Article populaire',content:'Decouvrez les dernieres tendances du moment. Cliquez pour lire la suite...'}},
+    {type:'card',props:{title:'💡 Conseil du jour',content:'5 astuces pour ameliorer votre productivite quotidienne.'}},
+    {type:'badge-row',props:{items:'Tech\nLifestyle\nBusiness\nSante'}},
+    {type:'list',props:{items:'📰 Article 3|Il y a 2h - 5 min de lecture\n📰 Article 4|Il y a 4h - 3 min de lecture'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Decouvrir\n🔔 Alertes\n👤 Profil',active:0}},
   ],
-  music: [
-    {type:'header',props:{title:'Musique',subtitle:''}},
-    {type:'music-player',props:{emoji:'🎵',title:'Ma chanson',artist:'Artiste',duration:'3:42'}},
-    {type:'tabs',props:{tabs:'En cours\nPlaylist\nArtistes',active:0}},
-    {type:'list',props:{items:'Chanson 1|Artiste A · 3:24\nChanson 2|Artiste B · 4:12\nChanson 3|Artiste C · 2:58'}},
-    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Découvrir\n🎵 Biblio\n👤 Profil',active:2}},
+  community: [
+    {type:'header',props:{title:'Communaute',subtitle:'1 234 membres'}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher un sujet...'}},
+    {type:'tabs',props:{tabs:'Populaire\nRecent\nMes posts',active:0}},
+    {type:'card',props:{title:'💬 Meilleurs outils 2025',content:'Partagez vos outils preferes. 48 reponses · 234 vues'}},
+    {type:'card',props:{title:'🚀 Ressources gratuites',content:'Liste complete de ressources. 126 reponses · 1.2K vues'}},
+    {type:'btn-primary',props:{text:'Creer une discussion',action:'alert',actionVal:'Creation de post...'}},
+    {type:'bnav',props:{items:'🏠 Feed\n👥 Communaute\n🔔 Notifs\n👤 Profil',active:1}},
+  ],
+  review: [
+    {type:'header',props:{title:'Avis et Temoignages',subtitle:'Ce que nos clients disent'}},
+    {type:'statrow',props:{stats:'4.8|Note globale\n2.4K|Avis\n96%|Recommandent'}},
+    {type:'progress',props:{label:'5 etoiles',value:78}},
+    {type:'progress',props:{label:'4 etoiles',value:15}},
+    {type:'testimonial',props:{quote:'Absolument incroyable ! Cette app a change ma vie.',author:'Sophie M.',rating:5}},
+    {type:'testimonial',props:{quote:'Interface intuitive, support reactif. Exactement ce dont j\'avais besoin.',author:'Karim D.',rating:5}},
+    {type:'btn-primary',props:{text:'Laisser un avis',action:'alert',actionVal:'Merci pour votre avis !'}},
   ],
   dashboard: [
     {type:'header',props:{title:'Dashboard',subtitle:'Vue d\'ensemble'}},
-    {type:'statrow',props:{stats:'2.4K|Vues\n186|Ventes\n94%|Score'}},
-    {type:'progress',props:{label:'Objectif mensuel',value:78,color:''}},
-    {type:'notif',props:{title:'Nouvelle commande',message:'Commande #1234 reçue il y a 5 min'}},
-    {type:'card',props:{title:'📈 Rapport',content:'Les performances sont en hausse de 12% cette semaine.'}},
-    {type:'list',props:{items:'Ventes|+24% cette semaine\nClients|186 nouveaux\nRevenu|€4,280'}},
-    {type:'bnav',props:{items:'📊 Dashboard\n📦 Produits\n💰 Ventes\n⚙️ Paramètres',active:0}},
+    {type:'statrow',props:{stats:'8 240€|Revenus\n186|Ventes\n94%|Satisfaction'}},
+    {type:'progress',props:{label:'Objectif mensuel',value:82}},
+    {type:'notif',props:{title:'🔥 Nouvelle commande !',message:'Commande #1847 — 129.99€ — il y a 3 min'}},
+    {type:'card',props:{title:'📈 Rapport hebdomadaire',content:'Semaine excellente ! +24% vs semaine precedente.'}},
+    {type:'list',props:{items:'📦 Commandes|+24% cette semaine\n👥 Nouveaux clients|186 inscrits\n💰 Revenu net|6 180€\n⭐ Note moyenne|4.9/5'}},
+    {type:'btn-primary',props:{text:'Voir le rapport complet'}},
+    {type:'bnav',props:{items:'📊 Dashboard\n📦 Produits\n💰 Ventes\n⚙️ Config',active:0}},
   ],
   contact: [
-    {type:'header',props:{title:'Contactez-nous',subtitle:''}},
-    {type:'form-wrap',props:{title:'Envoyer un message',submitText:'Envoyer',submitAction:'alert',submitVal:'Message envoyé ! Merci.'}},
-    {type:'list',props:{items:'📧 Email|contact@monapp.com\n📱 WhatsApp|+33 6 00 00 00 00\n🌐 Site|www.monapp.com'}},
-    {type:'share-bar',props:{platforms:'WhatsApp\nEmail\nCopier'}},
+    {type:'header',props:{title:'Contactez-nous',subtitle:'Nous repondons en moins de 24h'}},
+    {type:'form-wrap',props:{title:'Envoyer un message',submitText:'Envoyer',submitVal:'Message envoye ! Nous vous repondrons sous 24h.'}},
+    {type:'divider',props:{}},
+    {type:'list',props:{items:'📧 Email|contact@monapp.com\n📱 WhatsApp|+33 6 00 00 00 00\n🕒 Horaires|Lun-Ven 9h-18h'}},
+    {type:'map',props:{address:'Paris, France'}},
   ],
-};
+  pricing: [
+    {type:'header',props:{title:'Nos tarifs',subtitle:'Simple et transparent'}},
+    {type:'pricing-card',props:{name:'GRATUIT',price:'0€/mois',features:'3 projets\nFonctions de base\nPartage par lien\nSupport communaute'}},
+    {type:'pricing-card',props:{name:'PRO',price:'9,99€/mois',features:'Projets illimites\nToutes les fonctions\nExport APK\nSupport prioritaire'}},
+    {type:'pricing-card',props:{name:'ENTREPRISE',price:'Sur devis',features:'Tout du plan Pro\nAPI dediee\nSLA garanti\nGestionnaire dedie'}},
+    {type:'btn-primary',props:{text:'Demarrer gratuitement'}},
+  ],
+  booking: [
+    {type:'header',props:{title:'Reservation',subtitle:'Choisissez votre creneau'}},
+    {type:'input-date',props:{label:'Date souhaitee'}},
+    {type:'select-input',props:{label:'Heure',options:'09:00\n10:00\n11:00\n14:00\n15:00\n16:00\n17:00'}},
+    {type:'select-input',props:{label:'Service',options:'Consultation (30 min)\nSuivi (1h)\nBilan complet (2h)'}},
+    {type:'textarea',props:{label:'Informations complementaires',placeholder:'Precisez vos besoins...',rows:3}},
+    {type:'card',props:{title:'📋 Recapitulatif',content:'Date : A definir\nService : A definir\nDuree : A definir'}},
+    {type:'btn-primary',props:{text:'Confirmer la reservation',action:'alert',actionVal:'Reservation confirmee !'}},
+  ],
+  shop: [
+    {type:'header',props:{title:'Boutique',subtitle:''}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher un produit...'}},
+    {type:'tabs',props:{tabs:'Tous\nNouveautes\nPromos\nTop ventes',active:0}},
+    {type:'badge-row',props:{items:'Livraison offerte\nRetour gratuit\n-30% ce week-end'}},
+    {type:'card',props:{title:'🌟 Produit vedette',content:'Notre bestseller du mois — 49.99€\n⭐⭐⭐⭐⭐ (342 avis)'}},
+    {type:'card',props:{title:'🔥 Promotion flash',content:'Offre limitee 24h — -30% sur toute la collection\nCode : FLASH30'}},
+    {type:'btn-primary',props:{text:'Voir toutes les offres'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Chercher\n❤️ Favoris\n🛒 Panier',active:0}},
+  ],
+  product: [
+    {type:'image',props:{src:'',ratio:'4/3'}},
+    {type:'text',props:{heading:'Nom du produit',content:'Reference : PRD-001 - En stock',align:'left'}},
+    {type:'rating',props:{value:4,max:5,label:'(128 avis)'}},
+    {type:'text',props:{heading:'Prix : 49.99€',content:'Economisez 37%',align:'left'}},
+    {type:'select-input',props:{label:'Couleur',options:'Noir\nBlanc\nBleu\nRouge'}},
+    {type:'stepper',props:{value:1,min:1,max:10}},
+    {type:'btn-primary',props:{text:'Ajouter au panier',action:'alert',actionVal:'Ajoute au panier !'}},
+    {type:'btn-outline',props:{text:'Acheter maintenant'}},
+    {type:'list',props:{items:'🚚 Livraison|Offerte des 50€\n↩️ Retours|30 jours gratuits\n🔒 Paiement|100% securise'}},
+  ],
+  cart: [
+    {type:'header',props:{title:'Mon panier',subtitle:'3 articles'}},
+    {type:'list',props:{items:'📦 Produit A|29.99€ × 2\n📦 Produit B|19.99€ × 1\n🎁 Code promo|BIENVENUE10 (-8.00€)'}},
+    {type:'card',props:{title:'💰 Recapitulatif',content:'Sous-total : 79.97€\nPromo : -8.00€\nLivraison : Gratuite\nTotal : 71.97€'}},
+    {type:'input-text',props:{label:'Code promo',placeholder:'Entrez votre code...'}},
+    {type:'btn-secondary',props:{text:'Appliquer',action:'alert',actionVal:'Code applique !'}},
+    {type:'btn-primary',props:{text:'Passer la commande'}},
+  ],
+  checkout: [
+    {type:'header',props:{title:'Paiement',subtitle:'Etape finale'}},
+    {type:'progress',props:{label:'Etape 3/3 — Paiement',value:100}},
+    {type:'input-text',props:{label:'Nom complet',placeholder:'Jean Dupont',required:true}},
+    {type:'input-text',props:{label:'Adresse',placeholder:'12 rue de la Paix',required:true}},
+    {type:'select-input',props:{label:'Mode de paiement',options:'Carte bancaire\nPayPal\nApple Pay\nVirement'}},
+    {type:'btn-primary',props:{text:'Payer 71.97€',action:'alert',actionVal:'Paiement reussi ! Merci pour votre commande.'}},
+  ],
+  course: [
+    {type:'header',props:{title:'Mes Cours',subtitle:''}},
+    {type:'statrow',props:{stats:'12|Cours\n8|Termines\n94%|Score moyen'}},
+    {type:'progress',props:{label:'Objectif semaine : 5h',value:60}},
+    {type:'tabs',props:{tabs:'En cours\nCompletes\nSauvegardes',active:0}},
+    {type:'course-card',props:{emoji:'🎨',title:'Design UX/UI Avance',instructor:'Marie Martin',duration:'6h 15min',progress:65}},
+    {type:'course-card',props:{emoji:'💻',title:'React Native Complet',instructor:'Jean Dupont',duration:'12h',progress:30}},
+    {type:'course-card',props:{emoji:'📊',title:'Data Analysis Python',instructor:'Sophie Chen',duration:'8h 30min',progress:0}},
+    {type:'btn-primary',props:{text:'Explorer le catalogue'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n📚 Cours\n🏆 Progres\n👤 Profil',active:1}},
+  ],
+  lesson: [
+    {type:'header',props:{title:'Lecon 3 : Les bases',subtitle:'Design UX/UI'}},
+    {type:'progress',props:{label:'Progression du cours',value:45}},
+    {type:'video',props:{title:'Video : Introduction au Design Thinking',url:''}},
+    {type:'text',props:{heading:'Resume de la lecon',content:'Le Design Thinking est une approche centree sur l\'utilisateur. Il comprend 5 etapes.',align:'left'}},
+    {type:'card',props:{title:'💡 Points cles',content:'Toujours penser a l\'utilisateur final\nPrototyper tot\nIterer continuellement'}},
+    {type:'btn-primary',props:{text:'Marquer comme termine',action:'alert',actionVal:'Bravo ! Lecon completee. +50 XP'}},
+    {type:'btn-secondary',props:{text:'Lecon suivante'}},
+  ],
+  quiz: [
+    {type:'header',props:{title:'Quiz — Lecon 3',subtitle:'5 questions - 3 minutes'}},
+    {type:'progress',props:{label:'Question 1 sur 5',value:20}},
+    {type:'card',props:{title:'❓ Combien d\'etapes compte le Design Thinking ?',content:''}},
+    {type:'btn-secondary',props:{text:'A. 3 etapes',action:'alert',actionVal:'Mauvaise reponse. La bonne reponse est 5 etapes.'}},
+    {type:'btn-primary',props:{text:'B. 5 etapes',action:'alert',actionVal:'Bonne reponse ! +10 points'}},
+    {type:'btn-secondary',props:{text:'C. 7 etapes',action:'alert',actionVal:'Mauvaise reponse.'}},
+    {type:'btn-secondary',props:{text:'D. 4 etapes',action:'alert',actionVal:'Mauvaise reponse.'}},
+  ],
+  progress: [
+    {type:'header',props:{title:'Ma Progression',subtitle:''}},
+    {type:'statrow',props:{stats:'847|XP\n12|Badges\n23|Jours'}},
+    {type:'progress',props:{label:'XP vers Expert',value:85}},
+    {type:'progress',props:{label:'Design UX/UI',value:65}},
+    {type:'progress',props:{label:'React Native',value:30}},
+    {type:'card',props:{title:'🏆 Badges obtenus',content:'🎯 Premier cours · 🔥 7 jours consecutifs · ⚡ Quiz parfait'}},
+    {type:'btn-primary',props:{text:'Continuer l\'apprentissage'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n📚 Cours\n🏆 Progres\n👤 Profil',active:2}},
+  ],
+  music: [
+    {type:'header',props:{title:'Ma Musique',subtitle:''}},
+    {type:'music-player',props:{emoji:'🎵',title:'Titre de la chanson',artist:'Nom de l\'artiste',duration:'3:42'}},
+    {type:'tabs',props:{tabs:'En lecture\nPlaylist\nArtistes\nPodcasts',active:0}},
+    {type:'list',props:{items:'🎵 Chanson 1|Artiste A - 3:24\n🎵 Chanson 2|Artiste B - 4:12\n🎵 Chanson 3|Artiste C - 2:58'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Decouvrir\n🎵 Biblio\n📻 Radio',active:2}},
+  ],
+  video: [
+    {type:'header',props:{title:'Videos',subtitle:''}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher une video...'}},
+    {type:'tabs',props:{tabs:'Tendances\nAbonnements\nHistorique',active:0}},
+    {type:'video',props:{title:'🔥 Video trending #1',url:''}},
+    {type:'card',props:{title:'Video populaire',content:'125K vues - il y a 2 jours - Chaine Officielle'}},
+    {type:'video',props:{title:'Tutoriel : Comment debuter',url:''}},
+    {type:'bnav',props:{items:'🏠 Accueil\n🔍 Explorer\n➕ Upload\n🔔 Notifs\n👤 Profil',active:0}},
+  ],
+  gallery: [
+    {type:'header',props:{title:'Portfolio',subtitle:'Mes creations'}},
+    {type:'statrow',props:{stats:'48|Photos\n12K|Vues\n234|Likes'}},
+    {type:'tabs',props:{tabs:'Tout\nPhotos\nIllustrations\nUI Design',active:0}},
+    {type:'gallery',props:{count:6}},
+    {type:'btn-outline',props:{text:'Voir en plein ecran'}},
+    {type:'share-bar',props:{platforms:'Instagram\nPinterest\nFacebook\nCopier'}},
+  ],
+  fitness: [
+    {type:'header',props:{title:'Mon Fitness',subtitle:'Aujourd\'hui'}},
+    {type:'statrow',props:{stats:'847|Calories\n6.2K|Pas\n42min|Actif'}},
+    {type:'progress',props:{label:'Objectif calories : 2000 kcal',value:42}},
+    {type:'progress',props:{label:'Pas quotidiens : 10 000',value:62}},
+    {type:'card',props:{title:'💪 Seance du jour',content:'Musculation - 45 min\nHaute intensite - 8 exercices - 3 series chacun'}},
+    {type:'list',props:{items:'🏋️ Developpe couche|3×12 - 60kg\n🦵 Squat|3×15 - 80kg\n🔄 Tractions|3×10'}},
+    {type:'btn-primary',props:{text:'Demarrer la seance',action:'alert',actionVal:'Seance demarree ! Bon courage 💪'}},
+    {type:'bnav',props:{items:'🏠 Home\n💪 Seances\n📊 Stats\n🥗 Nutrition',active:0}},
+  ],
+  nutrition: [
+    {type:'header',props:{title:'Nutrition',subtitle:'Aujourd\'hui'}},
+    {type:'statrow',props:{stats:'1420|kcal\n78g|Proteines\n45g|Lipides'}},
+    {type:'progress',props:{label:'Calories : 1420 / 2000 kcal',value:71}},
+    {type:'tabs',props:{tabs:'Petit-dej\nDejeuner\nDiner\nCollation',active:1}},
+    {type:'list',props:{items:'🥗 Salade Cesar|450 kcal - 35g proteines\n🍎 Pomme|80 kcal\n💧 Eau|0 kcal'}},
+    {type:'card',props:{title:'💡 Conseil nutrition',content:'Vous manquez de proteines. Ajoutez une collation proteinee.'}},
+    {type:'btn-primary',props:{text:'+ Ajouter un aliment',action:'alert',actionVal:'Recherche d\'aliment...'}},
+  ],
+  medecin: [
+    {type:'header',props:{title:'Espace Sante',subtitle:''}},
+    {type:'card',props:{title:'👨‍⚕️ Prochain RDV',content:'Dr. Martin - Medecin generaliste\nJeudi 15 avril - 10h30\nCabinet : 12 rue de la Paix, Paris'}},
+    {type:'btn-primary',props:{text:'Confirmer le RDV',action:'alert',actionVal:'RDV confirme !'}},
+    {type:'btn-outline',props:{text:'Reporter le RDV'}},
+    {type:'divider',props:{}},
+    {type:'list',props:{items:'💊 Medicaments|Rappel 8h - Doliprane 1000mg\n📋 Ordonnances|2 en cours\n📊 Derniere analyse|15 mars 2026'}},
+    {type:'switch-row',props:{label:'Rappels medicaments',on:true}},
+    {type:'bnav',props:{items:'🏠 Accueil\n📅 RDV\n💊 Medicaments\n👤 Profil',active:0}},
+  ],
+  travel: [
+    {type:'header',props:{title:'Voyages',subtitle:'Explorez le monde'}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Ou souhaitez-vous aller ?'}},
+    {type:'badge-row',props:{items:'🌍 Europe\n🏝️ Caraibes\n🏔️ Asie\n🗽 Amerique'}},
+    {type:'card',props:{title:'🌟 Destination tendance',content:'Bali, Indonesie - 7 nuits - A partir de 899€\n⭐⭐⭐⭐⭐ - Plus de 2000 avis'}},
+    {type:'card',props:{title:'🔥 Offre flash',content:'Paris - New York - 15 mai\nAller-retour - 599€ - 8 places restantes !'}},
+    {type:'statrow',props:{stats:'120+|Destinations\n50K+|Voyageurs\n4.9|Note'}},
+    {type:'btn-primary',props:{text:'Rechercher un vol'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n✈️ Vols\n🏨 Hotels\n🗺️ Explorer',active:0}},
+  ],
+  hotel: [
+    {type:'image',props:{src:'',ratio:'16/9'}},
+    {type:'text',props:{heading:'Hotel Grand Paris ★★★★',content:'📍 1er arrondissement - A 200m du Louvre',align:'left'}},
+    {type:'rating',props:{value:5,max:5,label:'(1 243 avis) - Exceptionnel'}},
+    {type:'statrow',props:{stats:'189€|/nuit\n4.9|Note\n2km|Centre'}},
+    {type:'list',props:{items:'🅿️ Parking|Gratuit et inclus\n🏊 Piscine|Ouverte 7h-22h\n🍽️ Restaurant|Sur place\n📶 WiFi|Gratuit'}},
+    {type:'input-date',props:{label:'Date d\'arrivee'}},
+    {type:'input-date',props:{label:'Date de depart'}},
+    {type:'btn-primary',props:{text:'Reserver maintenant',action:'alert',actionVal:'Reservation confirmee !'}},
+  ],
+  map: [
+    {type:'header',props:{title:'Carte et Lieux',subtitle:'Autour de vous'}},
+    {type:'input-text',props:{label:'',placeholder:'🔍 Rechercher un lieu...'}},
+    {type:'map',props:{address:'Paris, France'}},
+    {type:'badge-row',props:{items:'Restaurants\nMusees\nHotels\nTransports'}},
+    {type:'list',props:{items:'🍽️ Le Bistrot Parisien|4.8★ - 150m - Ouvert\n☕ Cafe de Flore|4.6★ - 300m\n🏛️ Musee du Louvre|4.9★ - 500m'}},
+    {type:'btn-primary',props:{text:'Voir sur la carte complete',action:'openUrl',actionVal:'https://maps.google.com'}},
+    {type:'bnav',props:{items:'🏠 Accueil\n🗺️ Carte\n❤️ Favoris\n👤 Profil',active:1}},
+  ],
+
+
+const TMPL_CATS = [
+  {id:'all',    label:'✨ Tous'},
+  {id:'basic',  label:'📐 Basiques'},
+  {id:'auth',   label:'🔐 Auth'},
+  {id:'social', label:'💬 Social'},
+  {id:'biz',    label:'💼 Business'},
+  {id:'shop',   label:'🛒 E-commerce'},
+  {id:'edu',    label:'🎓 Éducation'},
+  {id:'media',  label:'🎵 Médias'},
+  {id:'health', label:'💪 Santé'},
+  {id:'travel', label:'✈️ Voyage'},
+];
 
 const TMPL_LIST = [
-  {id:'blank',icon:'⬜',name:'Vide'},
-  {id:'home',icon:'🏠',name:'Accueil'},
-  {id:'login',icon:'🔐',name:'Connexion'},
-  {id:'shop',icon:'🛒',name:'Shop'},
-  {id:'profile',icon:'👤',name:'Profil'},
-  {id:'chat',icon:'💬',name:'Chat'},
-  {id:'course',icon:'🎓',name:'Cours'},
-  {id:'music',icon:'🎵',name:'Musique'},
-  {id:'dashboard',icon:'📊',name:'Dashboard'},
-  {id:'contact',icon:'📧',name:'Contact'},
+  // ── BASIQUES ──
+  {id:'blank',     cat:'basic', icon:'⬜', name:'Page vide',       desc:'Commencer from scratch',          color:'#6b7280'},
+  {id:'home',      cat:'basic', icon:'🏠', name:'Accueil',          desc:'Page d'accueil classique',       color:'#16a34a'},
+  {id:'landing',   cat:'basic', icon:'🚀', name:'Landing page',     desc:'Présentation produit',            color:'#7c3aed'},
+  {id:'about',     cat:'basic', icon:'ℹ️',  name:'À propos',         desc:'Présentation équipe/entreprise',  color:'#0ea5e9'},
+  {id:'faq',       cat:'basic', icon:'❓', name:'FAQ',              desc:'Questions fréquentes',            color:'#f59e0b'},
+  {id:'settings',  cat:'basic', icon:'⚙️', name:'Paramètres',       desc:'Réglages application',            color:'#374151'},
+  // ── AUTH ──
+  {id:'login',     cat:'auth',  icon:'🔐', name:'Connexion',        desc:'Login email + mot de passe',      color:'#16a34a'},
+  {id:'register',  cat:'auth',  icon:'📝', name:'Inscription',      desc:'Créer un compte',                 color:'#0ea5e9'},
+  {id:'forgot',    cat:'auth',  icon:'🔑', name:'Mot de passe',     desc:'Récupération de compte',          color:'#f97316'},
+  {id:'onboarding',cat:'auth',  icon:'👋', name:'Onboarding',       desc:'Accueil premier lancement',       color:'#8b5cf6'},
+  {id:'profile',   cat:'auth',  icon:'👤', name:'Profil',           desc:'Page profil utilisateur',         color:'#ec4899'},
+  // ── SOCIAL ──
+  {id:'chat',      cat:'social',icon:'💬', name:'Chat',             desc:'Messagerie instantanée',          color:'#22c55e'},
+  {id:'feed',      cat:'social',icon:'📰', name:'Feed actualités',  desc:'Fil d'actualité social',         color:'#3b82f6'},
+  {id:'stories',   cat:'social',icon:'🎞️', name:'Stories',          desc:'Contenu éphémère type IG',        color:'#f43f5e'},
+  {id:'community', cat:'social',icon:'👥', name:'Communauté',       desc:'Forum / groupe',                  color:'#8b5cf6'},
+  {id:'review',    cat:'social',icon:'⭐', name:'Avis & Notations', desc:'Reviews et témoignages',          color:'#f59e0b'},
+  // ── BUSINESS ──
+  {id:'dashboard', cat:'biz',   icon:'📊', name:'Dashboard',        desc:'Tableau de bord stats',           color:'#0ea5e9'},
+  {id:'invoice',   cat:'biz',   icon:'🧾', name:'Facture',          desc:'Détail commande / facture',       color:'#16a34a'},
+  {id:'contact',   cat:'biz',   icon:'📧', name:'Contact',          desc:'Formulaire de contact',           color:'#6366f1'},
+  {id:'pricing',   cat:'biz',   icon:'💳', name:'Tarifs',           desc:'Plans et abonnements',            color:'#7c3aed'},
+  {id:'booking',   cat:'biz',   icon:'📅', name:'Réservation',      desc:'Prise de rendez-vous',            color:'#0891b2'},
+  // ── E-COMMERCE ──
+  {id:'shop',      cat:'shop',  icon:'🛒', name:'Boutique',         desc:'Catalogue produits',              color:'#f97316'},
+  {id:'product',   cat:'shop',  icon:'📦', name:'Fiche produit',    desc:'Détail d'un produit',            color:'#ef4444'},
+  {id:'cart',      cat:'shop',  icon:'🛍️', name:'Panier',           desc:'Résumé commande',                 color:'#16a34a'},
+  {id:'checkout',  cat:'shop',  icon:'💳', name:'Paiement',         desc:'Étape de paiement',               color:'#7c3aed'},
+  // ── ÉDUCATION ──
+  {id:'course',    cat:'edu',   icon:'🎓', name:'Mes cours',        desc:'Liste de cours',                  color:'#0ea5e9'},
+  {id:'lesson',    cat:'edu',   icon:'📖', name:'Leçon',            desc:'Contenu de cours / quiz',         color:'#16a34a'},
+  {id:'quiz',      cat:'edu',   icon:'🧠', name:'Quiz',             desc:'Questions / réponses',            color:'#f59e0b'},
+  {id:'progress',  cat:'edu',   icon:'📈', name:'Progression',      desc:'Tableau de progression',          color:'#8b5cf6'},
+  // ── MÉDIAS ──
+  {id:'music',     cat:'media', icon:'🎵', name:'Lecteur musik',    desc:'Player audio / playlist',         color:'#1f2937'},
+  {id:'video',     cat:'media', icon:'🎬', name:'Vidéothèque',      desc:'Liste de vidéos',                 color:'#dc2626'},
+  {id:'podcast',   cat:'media', icon:'🎙️', name:'Podcast',          desc:'Épisodes de podcast',             color:'#7c3aed'},
+  {id:'gallery',   cat:'media', icon:'🖼️', name:'Galerie',          desc:'Portfolio photos',                color:'#0891b2'},
+  // ── SANTÉ ──
+  {id:'fitness',   cat:'health',icon:'💪', name:'Fitness',          desc:'Entraînements & séances',         color:'#16a34a'},
+  {id:'nutrition', cat:'health',icon:'🥗', name:'Nutrition',        desc:'Repas & calories',                color:'#f59e0b'},
+  {id:'medecin',   cat:'health',icon:'🏥', name:'Médical',          desc:'Rendez-vous / santé',             color:'#0ea5e9'},
+  // ── VOYAGE ──
+  {id:'travel',    cat:'travel',icon:'✈️', name:'Voyage',           desc:'Destinations & itinéraires',      color:'#06b6d4'},
+  {id:'hotel',     cat:'travel',icon:'🏨', name:'Hôtel',            desc:'Fiche hôtel / réservation',       color:'#f97316'},
+  {id:'map',       cat:'travel',icon:'🗺️', name:'Carte & Lieux',   desc:'Points d'intérêt',               color:'#16a34a'},
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -699,7 +1010,6 @@ const LOGIC_TYPES = [
   {id:'call',icon:'📞',label:'Appeler un numéro',hasPage:false,placeholder:'+33600000000'},
   {id:'download',icon:'📥',label:'Télécharger un fichier',hasPage:false,placeholder:'https://fichier.pdf'},
 ];
-
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
@@ -764,17 +1074,39 @@ function buildCompGroups() {
 }
 
 function buildTmplGrid() {
-  document.getElementById('tmplGrid').innerHTML = TMPL_LIST.map(t => `
-    <div class="tmpl-opt ${t.id===selectedTemplate?'sel':''}" onclick="selTmpl('${t.id}',this)">
-      <div class="tmpl-icon">${t.icon}</div>
-      <div class="tmpl-name">${t.name}</div>
+  const tabsEl = document.getElementById('tmplCatTabs');
+  if (tabsEl) {
+    tabsEl.innerHTML = TMPL_CATS.map(cat =>
+      `<button onclick="filterTmplCat('${cat.id}')" id="tmplcat-${cat.id}" style="flex:none;padding:9px 14px;border:none;background:transparent;font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s">${cat.label}</button>`
+    ).join('');
+  }
+  renderTmplGrid('all');
+  setTimeout(()=>filterTmplCat('all'),10);
+}
+function filterTmplCat(catId) {
+  currentTmplCat = catId;
+  document.querySelectorAll('[id^="tmplcat-"]').forEach(b=>{b.style.color='var(--mu)';b.style.borderBottomColor='transparent';b.style.background='transparent';});
+  const a=document.getElementById('tmplcat-'+catId);
+  if(a){a.style.color='var(--g)';a.style.borderBottomColor='var(--g)';a.style.background='var(--gp)';}
+  renderTmplGrid(catId);
+}
+function renderTmplGrid(catId) {
+  const filtered = catId==='all' ? TMPL_LIST : TMPL_LIST.filter(t=>t.cat===catId);
+  document.getElementById('tmplGrid').innerHTML = filtered.map(t=>`
+    <div onclick="selTmpl('${t.id}',this)" data-tmpl="${t.id}" style="border:2px solid ${selectedTemplate===t.id?'var(--g)':'var(--bd)'};background:${selectedTemplate===t.id?'var(--gp)':'#fff'};border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s;position:relative">
+      <div style="width:40px;height:40px;border-radius:10px;background:${t.color||'#16a34a'}22;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 8px">${t.icon}</div>
+      <div style="font-size:.72rem;font-weight:900;color:var(--t);margin-bottom:3px">${t.name}</div>
+      <div style="font-size:.6rem;color:var(--mu);font-weight:600;line-height:1.3">${t.desc||''}</div>
+      ${selectedTemplate===t.id?'<div style="position:absolute;top:5px;right:5px;font-size:.58rem;background:var(--g);color:#fff;padding:2px 6px;border-radius:100px;font-weight:900">✓</div>':''}
     </div>`).join('');
 }
-
 function selTmpl(id, el) {
   selectedTemplate = id;
-  document.querySelectorAll('.tmpl-opt').forEach(e => e.classList.remove('sel'));
-  el.classList.add('sel');
+  document.querySelectorAll('[data-tmpl]').forEach(e=>{e.style.border='2px solid var(--bd)';e.style.background='#fff';const b=e.querySelector('div[style*="position:absolute"]');if(b)b.remove();});
+  el.style.border='2px solid var(--g)'; el.style.background='var(--gp)';
+  const badge=document.createElement('div');
+  badge.style.cssText='position:absolute;top:5px;right:5px;font-size:.58rem;background:var(--g);color:#fff;padding:2px 6px;border-radius:100px;font-weight:900';
+  badge.textContent='✓'; el.appendChild(badge);
 }
 
 function buildLogicOptsGrid() {
