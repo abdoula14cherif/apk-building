@@ -726,8 +726,11 @@ async function startNewApp() {
       }, { onConflict: 'id' });
     }
     const { data, error } = await sb.from('apps').insert({
-      user_id: USER.id, name: '', icon: '🚀',
-      status: 'draft', app_color: '#16a34a', last_step: 0
+      user_id: USER.id,
+      name: '',
+      icon: '🚀',
+      status: 'draft',
+      app_color: '#16a34a'
     }).select('id').single();
     if (error) throw error;
     window.location.href = 'builder.html?app=' + data.id;
